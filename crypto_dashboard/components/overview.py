@@ -45,8 +45,14 @@ class OverviewPanel:
         self.exchange_asset_var = tk.StringVar(value=self.chart_symbol)
         self.exchange_amount_var = tk.StringVar(value="1.0")
         self.exchange_quote_var = tk.StringVar(value="$ -- USD")
-
         self.frame = tk.Frame(parent, bg=self.bg, padx=28, pady=26)
+        tk.Label(
+            self.frame,
+            text="Overview",
+            font=("Helvetica", 22, "bold"),
+            bg=self.bg,
+            fg="#0f172a",
+        ).pack(anchor="w")
         self._build_main_layout()
         self.set_active_symbol(self.chart_symbol)
         self._trigger_chart_refresh()

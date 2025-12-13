@@ -48,6 +48,7 @@ class CryptoDashboardApp:
         self._scroll_drag_active = False
         self._scroll_drag_start = (0, 0)
         self.interval_var = tk.StringVar(value=DEFAULT_TECH_INTERVAL)
+        self.chart_symbol_var = tk.StringVar(value=self.current_symbol_key)
         self.nav_buttons = {}
         self.nav_callbacks = {}
         self.active_nav = None
@@ -209,14 +210,28 @@ class CryptoDashboardApp:
         if Image is None or ImageTk is None:
             return None
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        cat = self._load_logo_image_asset(
-            os.path.join(project_root, "ChatGPT Image Nov 29 2025 (1).png"),
-            target_height=128,
-        )
-        wordmark = self._load_logo_image_asset(
-            os.path.join(project_root, "MagicEraser_5681129_194136.PNG"),
-            target_height=60,
-        )
+        cat = None
+        for filename in (
+            "Subject 3.png",
+            "ChatGPT Image Nov 29 2025 (1).png",
+        ):
+            cat = self._load_logo_image_asset(
+                os.path.join(project_root, filename),
+                target_height=128,
+            )
+            if cat:
+                break
+        wordmark = None
+        for filename in (
+            "MagicEraser_5681129_194136.PNG",
+            "ChatGPT Image Nov 29 2025 (1).png",
+        ):
+            wordmark = self._load_logo_image_asset(
+                os.path.join(project_root, filename),
+                target_height=60,
+            )
+            if wordmark:
+                break
         if not cat or not wordmark:
             return None
         spacing = 22
@@ -450,6 +465,11 @@ class CryptoDashboardApp:
             f"View {interval.upper()} candlesticks for {self.display_symbol}"
         )
 
+    def _on_chart_symbol_selected(self, _event=None):
+        selected = (self.chart_symbol_var.get() or "").upper()
+        if selected and selected in DEFAULT_SYMBOLS:
+            self.switch_symbol(selected)
+
     def navigate_overview(self):
         self.hide_detail()
         self._hide_transactions_section()
@@ -520,17 +540,6 @@ class CryptoDashboardApp:
         detail_header = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15, pady=8)
         detail_header.pack(fill=tk.X)
 
-        tk.Button(
-            detail_header,
-            text="Back to Overview",
-            command=self.navigate_overview,
-            bg="#f3f4f6",
-            fg="#0f172a",
-            relief="flat",
-            padx=12,
-            pady=4,
-        ).pack(side=tk.RIGHT)
-
         controls = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15)
         controls.pack(fill=tk.X, pady=(0, 10))
         tk.Label(
@@ -547,8 +556,25 @@ class CryptoDashboardApp:
             state="readonly",
             width=6,
         )
-        interval_box.pack(side=tk.LEFT, padx=(8, 0))
+        interval_box.pack(side=tk.LEFT, padx=(8, 18))
         interval_box.bind("<<ComboboxSelected>>", self._on_interval_selected)
+
+        tk.Label(
+            controls,
+            text="Symbol",
+            fg=CHART_THEME["text_primary"],
+            bg=CHART_THEME["bg"],
+            font=("Helvetica", 11, "bold"),
+        ).pack(side=tk.LEFT)
+        symbol_box = ttk.Combobox(
+            controls,
+            values=list(DEFAULT_SYMBOLS.keys()),
+            textvariable=self.chart_symbol_var,
+            state="readonly",
+            width=6,
+        )
+        symbol_box.pack(side=tk.LEFT, padx=(8, 0))
+        symbol_box.bind("<<ComboboxSelected>>", self._on_chart_symbol_selected)
 
         ticker_wrapper = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15)
         ticker_wrapper.pack(fill=tk.X, pady=(0, 10))
@@ -559,6 +585,17 @@ class CryptoDashboardApp:
             theme=CHART_THEME,
         )
         self.ticker_panel.frame.pack(fill=tk.X)
+
+        self.chart_header = tk.Frame(self.detail_container, bg=CHART_THEME["panel"], padx=15, pady=12)
+        self.chart_header.pack(fill=tk.X)
+        self.chart_header_label = tk.Label(
+            self.chart_header,
+            text=f"{self.display_symbol} Chart View",
+            font=("Helvetica", 20, "bold"),
+            fg=CHART_THEME["text_primary"],
+            bg=CHART_THEME["panel"],
+        )
+        self.chart_header_label.pack(anchor="w")
 
         body = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15, pady=10)
         body.pack(fill=tk.BOTH, expand=True)
@@ -666,12 +703,16 @@ class CryptoDashboardApp:
             if hasattr(self, "overview_panel"):
                 self.overview_panel.set_active_symbol(symbol_key)
 
+        if hasattr(self, "chart_header_label"):
+            self.chart_header_label.config(text=f"{self.display_symbol} Chart View")
         if hasattr(self, "chart_banner_title"):
             self.chart_banner_title.config(text=f"{self.display_symbol} Dashboard")
         if hasattr(self, "chart_banner_status"):
             self.chart_banner_status.config(
                 text=f"CHART • {self.display_symbol} dashboards"
             )
+        if hasattr(self, "chart_symbol_var"):
+            self.chart_symbol_var.set(symbol_key)
         if self.details_visible:
             self.header_title.config(text=f"{self.display_symbol} Dashboard")
         self.show_detail()
