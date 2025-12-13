@@ -58,4 +58,10 @@ WALLET_HOLDINGS = {
     "ETH": 0.15,
     "SOL": 3.2,
     "MATIC": 50,
+    "BNB": 0.5,
+    "XRP": 100,
+    "ADA": 200,
+    "DOGE": 500,
+    "LTC": 2.5,
+    "AVAX": 10,
 }

@@ -668,16 +668,18 @@ class CryptoDashboardApp:
         self.detail_container.pack_forget()
 
     def _build_transactions_section(self):
+        # Use light theme background to match other pages
+        light_bg = "#f5f7fb"
         self.transactions_container = tk.Frame(
-            self.content_frame, bg=THEME["bg"], padx=15, pady=10)
-        header = tk.Frame(self.transactions_container, bg=THEME["bg"])
+            self.content_frame, bg=light_bg, padx=15, pady=10)
+        header = tk.Frame(self.transactions_container, bg=light_bg)
         header.pack(fill=tk.X, pady=(0, 10))
         tk.Label(
             header,
             text="Market Transactions",
             font=("Helvetica", 18, "bold"),
-            fg=THEME["text_primary"],
-            bg=THEME["bg"],
+            fg="#111827",
+            bg=light_bg,
         ).pack(anchor="w")
         self.transactions_panel = TransactionsPanel(
             self.transactions_container,
@@ -688,17 +690,10 @@ class CryptoDashboardApp:
         self.transactions_container.pack_forget()
 
     def _build_wallet_section(self):
+        # Use light theme background to match other pages
+        light_bg = "#f5f7fb"
         self.wallet_container = tk.Frame(
-            self.content_frame, bg=THEME["bg"], padx=15, pady=10)
-        header = tk.Frame(self.wallet_container, bg=THEME["bg"])
-        header.pack(fill=tk.X, pady=(0, 10))
-        tk.Label(
-            header,
-            text="Wallet Portfolio (Mock)",
-            font=("Helvetica", 18, "bold"),
-            fg=THEME["text_primary"],
-            bg=THEME["bg"],
-        ).pack(anchor="w")
+            self.content_frame, bg=light_bg, padx=15, pady=10)
         self.wallet_panel = WalletPanel(
             self.wallet_container,
             theme=THEME,

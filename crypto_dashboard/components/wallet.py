@@ -91,8 +91,6 @@ class WalletPanel:
             font=("Helvetica", 15, "bold"),
         ).pack(side=tk.RIGHT)
 
-        self._build_exchange_section()
-
         balances = tk.Frame(self.frame, bg=self.surface)
         balances.pack(fill=tk.X, pady=(10, 0))
         self.cash_var = tk.StringVar(value="USDT Balance: --")
@@ -104,40 +102,8 @@ class WalletPanel:
             font=("Helvetica", 12, "bold"),
         ).pack(anchor="w")
 
-        style = ttk.Style()
-        style.configure(
-            "Wallet.Treeview",
-            background=self.surface,
-            fieldbackground=self.surface,
-            foreground="#111827",
-            borderwidth=0,
-        )
-        style.configure(
-            "Wallet.Treeview.Heading",
-            background=self.surface,
-            foreground="#6b7280",
-            font=("Helvetica", 11, "bold"),
-        )
-        style.map(
-            "Wallet.Treeview",
-            background=[("selected", "#f3f4f6")],
-            foreground=[("selected", "#111827")],
-        )
-
-        self.tree = ttk.Treeview(
-            self.frame,
-            columns=("amount", "price", "value"),
-            show="headings",
-            height=7,
-            style="Wallet.Treeview",
-        )
-        self.tree.heading("amount", text="Amount")
-        self.tree.heading("price", text="Price (USDT)")
-        self.tree.heading("value", text="Value (USDT)")
-        self.tree.column("amount", width=90, anchor="center")
-        self.tree.column("price", width=110, anchor="center")
-        self.tree.column("value", width=110, anchor="center")
-        self.tree.pack(fill=tk.X, pady=10)
+        # Add Exchange section
+        self._build_exchange_section()
 
         controls = tk.Frame(self.frame, bg=self.surface)
         controls.pack(fill=tk.X, pady=(10, 0))
@@ -242,6 +208,10 @@ class WalletPanel:
         ).pack(fill=tk.X, pady=(10, 0))
 
         self._build_deposit_section()
+        
+        # Build Holdings section at the bottom
+        self._build_holdings_section()
+        
         self._apply_price_update({})
 
     def pack(self, **kwargs):
@@ -295,7 +265,7 @@ class WalletPanel:
             self.tree.insert(
                 "",
                 tk.END,
-                values=(f"{amount:.6f}", f"{price:,.2f}", f"{amount * price:,.2f}"),
+                values=(asset, f"{amount:.6f}", f"{price:,.2f}", f"{amount * price:,.2f}"),
                 tags=(asset,),
             )
 
@@ -467,55 +437,137 @@ class WalletPanel:
         ).pack(fill=tk.X, padx=12, pady=10)
 
     def _build_deposit_section(self):
-        section = tk.Frame(self.frame, bg=self.theme["panel"])
+        section = tk.Frame(self.frame, bg=self.surface)
         section.pack(fill=tk.X, pady=(12, 0))
         tk.Label(
             section,
-            text="Wallet actions",
-            bg=self.theme["panel"],
-            fg=self.theme["text_primary"],
-            font=("Helvetica", 12, "bold"),
-        ).pack(anchor="w")
+            text="Wallet Actions",
+            bg=self.surface,
+            fg="#111827",
+            font=("Helvetica", 14, "bold"),
+        ).pack(anchor="w", pady=(0, 10))
 
-        input_row = tk.Frame(section, bg=self.theme["panel"])
-        input_row.pack(fill=tk.X, pady=(6, 2))
-        self.deposit_entry = tk.Entry(input_row)
-        self.deposit_entry.pack(side=tk.LEFT, padx=(0, 8))
-        ttk.Button(
+        input_row = tk.Frame(section, bg=self.surface)
+        input_row.pack(fill=tk.X, pady=(0, 8))
+        
+        # Entry field with styling
+        entry_container = tk.Frame(input_row, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
+        entry_container.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 8))
+        self.deposit_entry = tk.Entry(
+            entry_container,
+            bd=0,
+            font=("Helvetica", 12),
+            bg="#ffffff",
+            fg="#111827",
+            highlightthickness=0,
+            insertbackground="#111827"
+        )
+        self.deposit_entry.pack(fill=tk.X, padx=10, pady=8)
+        
+        # Buttons with modern styling
+        deposit_btn = tk.Button(
             input_row,
             text="Deposit",
+            font=("Helvetica", 11, "bold"),
+            bg="#16a34a",
+            fg="white",
+            relief="flat",
+            padx=20,
+            pady=8,
             command=lambda: self._handle_wallet_action("deposit"),
-        ).pack(side=tk.LEFT, padx=(0, 6))
-        ttk.Button(
+            cursor="hand2",
+            activebackground="#15803d",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        deposit_btn.pack(side=tk.LEFT, padx=(0, 6))
+        
+        withdraw_btn = tk.Button(
             input_row,
             text="Withdraw",
+            font=("Helvetica", 11, "bold"),
+            bg="#dc2626",
+            fg="white",
+            relief="flat",
+            padx=20,
+            pady=8,
             command=lambda: self._handle_wallet_action("withdraw"),
-        ).pack(side=tk.LEFT)
+            cursor="hand2",
+            activebackground="#b91c1c",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        withdraw_btn.pack(side=tk.LEFT)
 
-        self.quick_deposit_frame = tk.LabelFrame(
-            section,
-            text="Quick deposit",
-            bg=self.theme["panel"],
-            fg=self.theme["text_primary"],
+        # Quick action frames with better styling
+        self.quick_deposit_frame = tk.Frame(section, bg=self.surface)
+        self.quick_withdraw_frame = tk.Frame(section, bg=self.surface)
+        
+        # Quick deposit section
+        deposit_label = tk.Label(
+            self.quick_deposit_frame,
+            text="Quick Deposit",
+            bg=self.surface,
+            fg="#6b7280",
+            font=("Helvetica", 10, "bold"),
         )
-        self.quick_withdraw_frame = tk.LabelFrame(
-            section,
-            text="Quick withdraw",
-            bg=self.theme["panel"],
-            fg=self.theme["text_primary"],
+        deposit_label.pack(anchor="w", pady=(0, 6))
+        
+        deposit_buttons = tk.Frame(self.quick_deposit_frame, bg=self.surface)
+        deposit_buttons.pack(fill=tk.X)
+        
+        # Quick withdraw section
+        withdraw_label = tk.Label(
+            self.quick_withdraw_frame,
+            text="Quick Withdraw",
+            bg=self.surface,
+            fg="#6b7280",
+            font=("Helvetica", 10, "bold"),
         )
+        withdraw_label.pack(anchor="w", pady=(0, 6))
+        
+        withdraw_buttons = tk.Frame(self.quick_withdraw_frame, bg=self.surface)
+        withdraw_buttons.pack(fill=tk.X)
+        
         for amount in (1000, 5000, 10000):
-            ttk.Button(
-                self.quick_deposit_frame,
+            btn = tk.Button(
+                deposit_buttons,
                 text=f"{amount:,}",
+                font=("Helvetica", 10, "bold"),
+                bg="#f3f4f6",
+                fg="#111827",
+                relief="flat",
+                padx=16,
+                pady=6,
                 command=lambda amt=amount: self._deposit_quick(amt),
-            ).pack(side=tk.LEFT, padx=(0, 6), pady=4)
+                cursor="hand2",
+                activebackground="#e5e7eb",
+                activeforeground="#111827",
+                bd=0,
+                highlightthickness=0
+            )
+            btn.pack(side=tk.LEFT, padx=(0, 6))
+        
         for amount in (1000, 5000, 10000):
-            ttk.Button(
-                self.quick_withdraw_frame,
+            btn = tk.Button(
+                withdraw_buttons,
                 text=f"{amount:,}",
+                font=("Helvetica", 10, "bold"),
+                bg="#f3f4f6",
+                fg="#111827",
+                relief="flat",
+                padx=16,
+                pady=6,
                 command=lambda amt=amount: self._withdraw_quick(amt),
-            ).pack(side=tk.LEFT, padx=(0, 6), pady=4)
+                cursor="hand2",
+                activebackground="#e5e7eb",
+                activeforeground="#111827",
+                bd=0,
+                highlightthickness=0
+            )
+            btn.pack(side=tk.LEFT, padx=(0, 6))
 
         self._show_quick_panel(None)
 
@@ -618,9 +670,8 @@ class WalletPanel:
         price = self.prices.get(asset, 0)
         quote = amount * price
         self.exchange_quote_var.set(f"$ {quote:,.2f} USD" if quote else "$ -- USD")
-        self.balance_display_var.set(f"$ {self.cash_balance:,.2f} USD")
-        amount_label = "0" if amount == 0 else f"{amount:.6g}"
-        self.exchange_label_var.set(f"{amount_label} {self._format_asset_hint(asset)} >>>")
+        if hasattr(self, "balance_display_var"):
+            self.balance_display_var.set(f"$ {self.cash_balance:,.2f} USD")
 
     def _on_trade_asset_selected(self):
         asset = self.asset_display_to_code.get(self.asset_display_var.get())

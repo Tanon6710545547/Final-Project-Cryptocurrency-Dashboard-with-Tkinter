@@ -120,8 +120,8 @@ class OverviewPanel:
         grid.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
         grid.columnconfigure(0, weight=1, uniform="col")
         grid.columnconfigure(1, weight=1, uniform="col")
-        grid.rowconfigure(0, weight=1, minsize=350)  # Set minimum size for top row
-        grid.rowconfigure(1, weight=10, minsize=500)  # Give bottom row much more weight for full screen
+        grid.rowconfigure(0, weight=1, minsize=300)  # Top row for favorites and chart
+        grid.rowconfigure(1, weight=3, minsize=400)  # Bottom row for live market and exchange
 
         favorites_holder = tk.Frame(grid, bg=self.bg)
         favorites_holder.grid(row=0, column=0, padx=(0, 12), pady=(0, 12), sticky="nsew")
@@ -201,7 +201,7 @@ class OverviewPanel:
             inner = tk.Frame(card, bg="#e5e7eb", padx=18, pady=16)
             inner.pack(fill=tk.BOTH, expand=True)
             inner.bind("<Button-1>", lambda _e, s=symbol: self._handle_symbol_select(s))
-            
+
             price_label = tk.Label(inner, text="$ --", font=("Helvetica", 24, "bold"), bg="#e5e7eb", fg="#111827")
             price_label.pack(anchor="w", pady=(30, 0))
             price_label.bind("<Button-1>", lambda _e, s=symbol: self._handle_symbol_select(s))
