@@ -40,7 +40,8 @@ class CryptoDashboardApp:
             "BTC" if "BTC" in DEFAULT_SYMBOLS else next(iter(DEFAULT_SYMBOLS))
         )
         self.symbol = DEFAULT_SYMBOLS[self.current_symbol_key]
-        self.display_symbol = self._format_display_name(self.current_symbol_key)
+        self.display_symbol = self._format_display_name(
+            self.current_symbol_key)
         self.status_var = tk.StringVar(value="LIVE • Connected to Binance")
         self.details_visible = False
         self.detail_panels_started = False
@@ -111,10 +112,12 @@ class CryptoDashboardApp:
         self.sidebar.pack_propagate(False)
         self._build_sidebar()
 
-        content_wrapper = tk.Frame(self.container, bg=THEME["bg"], highlightthickness=1)
+        content_wrapper = tk.Frame(
+            self.container, bg=THEME["bg"], highlightthickness=1)
         content_wrapper.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.main_canvas = tk.Canvas(content_wrapper, bg=THEME["bg"], highlightthickness=0)
+        self.main_canvas = tk.Canvas(
+            content_wrapper, bg=THEME["bg"], highlightthickness=0)
         self.main_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.content_frame = tk.Frame(self.main_canvas, bg=THEME["bg"])
@@ -129,17 +132,19 @@ class CryptoDashboardApp:
         )
         self.main_canvas.bind(
             "<Configure>",
-            lambda e: self.main_canvas.itemconfigure(self.canvas_window, width=e.width),
+            lambda e: self._update_canvas_window_size(e),
         )
         self.root.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
         self.root.bind_all("<Button-4>", self._on_mousewheel, add="+")
         self.root.bind_all("<Button-5>", self._on_mousewheel, add="+")
         self.root.bind_all("<ButtonPress-1>", self._start_scroll_drag, add="+")
         self.root.bind_all("<B1-Motion>", self._perform_scroll_drag, add="+")
-        self.root.bind_all("<ButtonRelease-1>", self._stop_scroll_drag, add="+")
+        self.root.bind_all("<ButtonRelease-1>",
+                           self._stop_scroll_drag, add="+")
         self._set_content_background(THEME["bg"])
         self.header_title = tk.Label(self.content_frame)
-        self.status_label = tk.Label(self.content_frame, textvariable=self.status_var)
+        self.status_label = tk.Label(
+            self.content_frame, textvariable=self.status_var)
 
         self._build_detail_section()
         self._build_transactions_section()
@@ -151,7 +156,7 @@ class CryptoDashboardApp:
             on_select=self.switch_symbol,
             theme=THEME,
         )
-        self.overview_panel.pack(fill=tk.X)
+        self.overview_panel.pack(fill=tk.BOTH, expand=True)
         self.overview_panel.set_active_symbol(self.current_symbol_key)
 
         self.header_title.config(text="Live Markets Overview")
@@ -209,7 +214,8 @@ class CryptoDashboardApp:
     def _compose_sidebar_logo(self):
         if Image is None or ImageTk is None:
             return None
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))
         cat = self._load_logo_image_asset(
             os.path.join(project_root, "Subject 3.png"),
             target_height=138,
@@ -231,7 +237,8 @@ class CryptoDashboardApp:
         spacing = 0
         combined_height = max(cat.height, wordmark.height + 16)
         combined_width = cat.width + spacing + wordmark.width
-        composed = Image.new("RGBA", (combined_width, combined_height), (0, 0, 0, 0))
+        composed = Image.new(
+            "RGBA", (combined_width, combined_height), (0, 0, 0, 0))
         top_margin = (combined_height - cat.height) // 2
         composed.paste(cat, (0, top_margin), cat)
         wordmark_y = (combined_height - wordmark.height) // 2 + 2
@@ -250,7 +257,8 @@ class CryptoDashboardApp:
         max_width = 260
         if composed.width > max_width:
             scale = max_width / composed.width
-            new_size = (int(composed.width * scale), int(composed.height * scale))
+            new_size = (int(composed.width * scale),
+                        int(composed.height * scale))
             composed = composed.resize(new_size, Image.LANCZOS)
         return ImageTk.PhotoImage(composed)
 
@@ -302,19 +310,28 @@ class CryptoDashboardApp:
         bg_color = "#fef6ea"
         stroke = "#1d3557"
         accent = "#1e90cf"
-        logo_canvas.create_oval(5, 5, 85, 85, outline=stroke, width=4, fill=bg_color)
-        logo_canvas.create_polygon(20, 12, 32, -5, 44, 12, fill=accent, outline=stroke, width=3)
-        logo_canvas.create_polygon(46, 12, 58, -5, 70, 12, fill=accent, outline=stroke, width=3)
-        logo_canvas.create_oval(18, 20, 72, 72, fill="#fffdfa", outline=stroke, width=3)
+        logo_canvas.create_oval(
+            5, 5, 85, 85, outline=stroke, width=4, fill=bg_color)
+        logo_canvas.create_polygon(
+            20, 12, 32, -5, 44, 12, fill=accent, outline=stroke, width=3)
+        logo_canvas.create_polygon(
+            46, 12, 58, -5, 70, 12, fill=accent, outline=stroke, width=3)
+        logo_canvas.create_oval(
+            18, 20, 72, 72, fill="#fffdfa", outline=stroke, width=3)
         logo_canvas.create_oval(30, 38, 38, 46, fill=stroke, outline=stroke)
         logo_canvas.create_oval(52, 38, 60, 46, fill=stroke, outline=stroke)
-        logo_canvas.create_line(27, 54, 33, 52, 47, 52, 53, 54, fill=stroke, width=3, smooth=True)
+        logo_canvas.create_line(27, 54, 33, 52, 47, 52,
+                                53, 54, fill=stroke, width=3, smooth=True)
         logo_canvas.create_oval(24, 46, 31, 54, fill="#f9a8d4", outline="")
         logo_canvas.create_oval(49, 46, 56, 54, fill="#f9a8d4", outline="")
-        logo_canvas.create_rectangle(18, 60, 72, 92, fill=stroke, outline=stroke)
-        logo_canvas.create_polygon(30, 60, 45, 75, 60, 60, fill="#bfe7ff", outline=stroke, width=2)
-        logo_canvas.create_oval(36, 72, 50, 86, fill="#ffd166", outline="#b45309", width=3)
-        logo_canvas.create_text(43, 79, text="฿", font=("Helvetica", 16, "bold"), fill="#b45309")
+        logo_canvas.create_rectangle(
+            18, 60, 72, 92, fill=stroke, outline=stroke)
+        logo_canvas.create_polygon(
+            30, 60, 45, 75, 60, 60, fill="#bfe7ff", outline=stroke, width=2)
+        logo_canvas.create_oval(
+            36, 72, 50, 86, fill="#ffd166", outline="#b45309", width=3)
+        logo_canvas.create_text(43, 79, text="฿", font=(
+            "Helvetica", 16, "bold"), fill="#b45309")
         logo_canvas.create_text(
             130,
             34,
@@ -368,11 +385,13 @@ class CryptoDashboardApp:
         )
         indicator.pack(side=tk.RIGHT)
         if active:
-            indicator.create_oval(4, 4, 10, 10, fill=THEME["sidebar_active"], outline="")
+            indicator.create_oval(
+                4, 4, 10, 10, fill=THEME["sidebar_active"], outline="")
 
         elements = (frame, icon_canvas, text_label, indicator)
         for element in elements:
-            element.bind("<Button-1>", lambda _e, key=label: self._handle_nav_click(key))
+            element.bind("<Button-1>", lambda _e,
+                         key=label: self._handle_nav_click(key))
 
         self.nav_buttons[label] = {
             "frame": frame,
@@ -413,14 +432,16 @@ class CryptoDashboardApp:
             canvas.create_rectangle(6, 11, 10, 17, outline=color, width=2)
             canvas.create_rectangle(20, 13, 24, 19, outline=color, width=2)
         elif shape == "chart":
-            canvas.create_line(5, 20, 10, 14, 16, 18, 22, 8, fill=color, width=2, smooth=True)
+            canvas.create_line(5, 20, 10, 14, 16, 18, 22, 8,
+                               fill=color, width=2, smooth=True)
             canvas.create_oval(20, 6, 24, 10, outline=color, width=2)
         elif shape == "wallet":
             canvas.create_rectangle(6, 9, 22, 19, outline=color, width=2)
             canvas.create_rectangle(6, 13, 22, 23, outline=color, width=2)
             canvas.create_rectangle(15, 14, 21, 18, fill=color, outline=color)
         elif shape == "bell":
-            canvas.create_arc(7, 6, 21, 20, start=210, extent=120, style="arc", outline=color, width=2)
+            canvas.create_arc(7, 6, 21, 20, start=210, extent=120,
+                              style="arc", outline=color, width=2)
             canvas.create_line(10, 18, 18, 18, fill=color, width=2)
             canvas.create_oval(12, 21, 14, 23, fill=color, outline=color)
         else:
@@ -452,7 +473,8 @@ class CryptoDashboardApp:
             indicator.delete("all")
             indicator.configure(bg=bg)
             if active:
-                indicator.create_oval(4, 4, 10, 10, fill=THEME["sidebar_active"], outline="")
+                indicator.create_oval(
+                    4, 4, 10, 10, fill=THEME["sidebar_active"], outline="")
 
     def _scroll_to_widget(self, widget):
         if not widget or not hasattr(self, "main_canvas"):
@@ -493,7 +515,8 @@ class CryptoDashboardApp:
             self._scroll_to_top()
         self.status_var.set("LIVE • Connected to Binance")
         self._set_active_nav("Overview")
-        self.sidebar_insight_var.set("Review the market and pick any token to focus on")
+        self.sidebar_insight_var.set(
+            "Review the market and pick any token to focus on")
 
     def navigate_detail(self):
         self.show_detail()
@@ -503,7 +526,8 @@ class CryptoDashboardApp:
         self.sidebar_insight_var.set(
             f"Access price, order book and indicator data for {self.display_symbol}"
         )
-        current = getattr(self.technical_panel, "interval", self.interval_var.get().lower())
+        current = getattr(self.technical_panel, "interval",
+                          self.interval_var.get().lower())
         self.interval_var.set(current.upper())
 
     def navigate_transactions(self):
@@ -512,7 +536,8 @@ class CryptoDashboardApp:
         self._scroll_to_widget(target or self.transactions_container)
         self.status_var.set("TRANSACTIONS • Market + mock trade logs")
         self._set_active_nav("Transactions")
-        self.sidebar_insight_var.set("See latest market trades and your mock orders")
+        self.sidebar_insight_var.set(
+            "See latest market trades and your mock orders")
 
     def navigate_wallet(self):
         self._show_wallet_section()
@@ -520,17 +545,21 @@ class CryptoDashboardApp:
         self._scroll_to_widget(target or self.wallet_container)
         self.status_var.set("WALLET • Portfolio allocation view")
         self._set_active_nav("Wallet")
-        self.sidebar_insight_var.set("Manage holdings easily with live USDT balances")
+        self.sidebar_insight_var.set(
+            "Manage holdings easily with live USDT balances")
 
     def show_alerts_center(self):
         self.status_var.set("ALERTS • No critical crypto alerts right now")
         self._set_active_nav("Alerts")
-        self.sidebar_insight_var.set("No new price alerts yet — set your targets ahead of time")
+        self.sidebar_insight_var.set(
+            "No new price alerts yet — set your targets ahead of time")
 
     def _build_detail_section(self):
-        self.detail_container = tk.Frame(self.content_frame, bg=CHART_THEME["bg"])
+        self.detail_container = tk.Frame(
+            self.content_frame, bg=CHART_THEME["bg"])
 
-        banner = tk.Frame(self.detail_container, bg="#0b1220", padx=20, pady=14)
+        banner = tk.Frame(self.detail_container,
+                          bg="#0b1220", padx=20, pady=14)
         banner.pack(fill=tk.X)
         self.chart_banner_title = tk.Label(
             banner,
@@ -549,10 +578,12 @@ class CryptoDashboardApp:
         )
         self.chart_banner_status.pack(side=tk.RIGHT)
 
-        detail_header = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15, pady=8)
+        detail_header = tk.Frame(
+            self.detail_container, bg=CHART_THEME["bg"], padx=15, pady=8)
         detail_header.pack(fill=tk.X)
 
-        controls = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15)
+        controls = tk.Frame(self.detail_container,
+                            bg=CHART_THEME["bg"], padx=15)
         controls.pack(fill=tk.X, pady=(0, 10))
         tk.Label(
             controls,
@@ -588,7 +619,8 @@ class CryptoDashboardApp:
         symbol_box.pack(side=tk.LEFT, padx=(8, 0))
         symbol_box.bind("<<ComboboxSelected>>", self._on_chart_symbol_selected)
 
-        ticker_wrapper = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15)
+        ticker_wrapper = tk.Frame(
+            self.detail_container, bg=CHART_THEME["bg"], padx=15)
         ticker_wrapper.pack(fill=tk.X, pady=(0, 10))
         self.ticker_panel = CryptoTicker(
             ticker_wrapper,
@@ -598,7 +630,8 @@ class CryptoDashboardApp:
         )
         self.ticker_panel.frame.pack(fill=tk.X)
 
-        self.chart_header = tk.Frame(self.detail_container, bg=CHART_THEME["panel"], padx=15, pady=12)
+        self.chart_header = tk.Frame(
+            self.detail_container, bg=CHART_THEME["panel"], padx=15, pady=12)
         self.chart_header.pack(fill=tk.X)
         self.chart_header_label = tk.Label(
             self.chart_header,
@@ -609,7 +642,8 @@ class CryptoDashboardApp:
         )
         self.chart_header_label.pack(anchor="w")
 
-        body = tk.Frame(self.detail_container, bg=CHART_THEME["bg"], padx=15, pady=10)
+        body = tk.Frame(self.detail_container,
+                        bg=CHART_THEME["bg"], padx=15, pady=10)
         body.pack(fill=tk.BOTH, expand=True)
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=2)
@@ -620,7 +654,8 @@ class CryptoDashboardApp:
             self.symbol,
             theme=CHART_THEME,
         )
-        self.orderbook_panel.frame.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        self.orderbook_panel.frame.grid(
+            row=0, column=0, sticky="nsew", padx=(0, 12))
 
         self.technical_panel = TechnicalPanel(
             body,
@@ -633,7 +668,8 @@ class CryptoDashboardApp:
         self.detail_container.pack_forget()
 
     def _build_transactions_section(self):
-        self.transactions_container = tk.Frame(self.content_frame, bg=THEME["bg"], padx=15, pady=10)
+        self.transactions_container = tk.Frame(
+            self.content_frame, bg=THEME["bg"], padx=15, pady=10)
         header = tk.Frame(self.transactions_container, bg=THEME["bg"])
         header.pack(fill=tk.X, pady=(0, 10))
         tk.Label(
@@ -652,7 +688,8 @@ class CryptoDashboardApp:
         self.transactions_container.pack_forget()
 
     def _build_wallet_section(self):
-        self.wallet_container = tk.Frame(self.content_frame, bg=THEME["bg"], padx=15, pady=10)
+        self.wallet_container = tk.Frame(
+            self.content_frame, bg=THEME["bg"], padx=15, pady=10)
         header = tk.Frame(self.wallet_container, bg=THEME["bg"])
         header.pack(fill=tk.X, pady=(0, 10))
         tk.Label(
@@ -684,7 +721,8 @@ class CryptoDashboardApp:
 
     def _record_mock_trade(self, action, asset, amount, price, notional):
         if hasattr(self, "transactions_panel"):
-            self.transactions_panel.record_user_trade(action, asset, amount, price, notional)
+            self.transactions_panel.record_user_trade(
+                action, asset, amount, price, notional)
         direction = "Buy" if action == "BUY" else "Sell"
         self.status_var.set(
             f"WALLET • {direction} {amount:.4f} {asset} @ {price:,.2f} (value {notional:,.2f})"
@@ -716,9 +754,11 @@ class CryptoDashboardApp:
                 self.overview_panel.set_active_symbol(symbol_key)
 
         if hasattr(self, "chart_header_label"):
-            self.chart_header_label.config(text=f"{self.display_symbol} Chart View")
+            self.chart_header_label.config(
+                text=f"{self.display_symbol} Chart View")
         if hasattr(self, "chart_banner_title"):
-            self.chart_banner_title.config(text=f"{self.display_symbol} Dashboard")
+            self.chart_banner_title.config(
+                text=f"{self.display_symbol} Dashboard")
         if hasattr(self, "chart_banner_status"):
             self.chart_banner_status.config(
                 text=f"CHART • {self.display_symbol} dashboards"
@@ -861,6 +901,17 @@ class CryptoDashboardApp:
     def _show_overview_section(self):
         if hasattr(self, "overview_panel") and not self.overview_panel.frame.winfo_ismapped():
             self.overview_panel.pack(fill=tk.X)
+
+    def _update_canvas_window_size(self, event):
+        """Update canvas window size to fill the canvas"""
+        if hasattr(self, "canvas_window") and hasattr(self, "main_canvas"):
+            self.main_canvas.itemconfigure(
+                self.canvas_window, width=event.width)
+            # Always make content_frame fill the full height of the canvas
+            canvas_height = event.height
+            if canvas_height > 1:
+                self.main_canvas.itemconfigure(
+                    self.canvas_window, height=canvas_height)
 
     def _set_content_background(self, color):
         if hasattr(self, "content_frame"):

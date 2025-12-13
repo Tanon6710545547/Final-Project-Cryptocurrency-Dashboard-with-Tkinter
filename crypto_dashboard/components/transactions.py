@@ -1,9 +1,20 @@
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 import threading
 from datetime import datetime
-from ..config import TRANSACTIONS_REFRESH_MS, THEME
-from ..utils.binance_rest import get_recent_trades
+
+if __package__ is None or __package__ == "":
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(os.path.dirname(current_dir))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    from config import TRANSACTIONS_REFRESH_MS, THEME  # type: ignore
+    from utils.binance_rest import get_recent_trades  # type: ignore
+else:
+    from ..config import TRANSACTIONS_REFRESH_MS, THEME
+    from ..utils.binance_rest import get_recent_trades
 
 
 class TransactionsPanel:

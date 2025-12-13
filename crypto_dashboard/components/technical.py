@@ -1,3 +1,5 @@
+import os
+import sys
 import tkinter as tk
 import threading
 from datetime import datetime
@@ -5,8 +7,17 @@ import matplotlib.dates as mdates
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.patches import Rectangle
-from ..utils.binance_rest import get_klines
-from ..config import TECHNICAL_REFRESH_MS
+
+if __package__ is None or __package__ == "":
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(os.path.dirname(current_dir))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    from utils.binance_rest import get_klines  # type: ignore
+    from config import TECHNICAL_REFRESH_MS  # type: ignore
+else:
+    from ..utils.binance_rest import get_klines
+    from ..config import TECHNICAL_REFRESH_MS
 
 LIGHT_CHART_THEME = {
     "panel": "#ffffff",
@@ -39,15 +50,6 @@ class TechnicalPanel:
             highlightbackground=self.theme.get("panel_border", "#333"),
             highlightthickness=1,
         )
-
-        self.title_label = tk.Label(
-            self.frame,
-            text=f"{self.symbol} {self.interval.upper()} Candlestick (Last 50)",
-            bg=self.theme.get("panel", "#111"),
-            fg=self.theme.get("text_primary", "#fff"),
-            font=("Helvetica", 15, "bold"),
-        )
-        self.title_label.pack(anchor="w")
 
         self.fig = Figure(figsize=(7.2, 6.2), dpi=100)
         grid = self.fig.add_gridspec(6, 1, height_ratios=[4, 4, 4, 4, 4, 2.8], hspace=0.05)
@@ -193,10 +195,6 @@ class TechnicalPanel:
             return
 
         self.symbol = new_symbol
-        self.title_label.config(
-            text=f"{self.symbol} {self.interval.upper()} Candlestick (Last 50)"
-        )
-
         if self.is_running:
             thread = threading.Thread(target=self.refresh_chart, daemon=True)
             thread.start()
@@ -206,9 +204,6 @@ class TechnicalPanel:
         if normalized == self.interval:
             return
         self.interval = normalized
-        self.title_label.config(
-            text=f"{self.symbol} {self.interval.upper()} Candlestick (Last 50)"
-        )
         if self.is_running:
             thread = threading.Thread(target=self.refresh_chart, daemon=True)
             thread.start()

@@ -1,9 +1,19 @@
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 import websocket
 import threading
 import json
-from ..config import MAX_TRADES_DISPLAY
+
+if __package__ is None or __package__ == "":
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(os.path.dirname(current_dir))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    from config import MAX_TRADES_DISPLAY  # type: ignore
+else:
+    from ..config import MAX_TRADES_DISPLAY
 
 
 class TradesPanel:

@@ -1,14 +1,31 @@
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 import threading
-from ..config import (
-    THEME,
-    DEFAULT_SYMBOLS,
-    WALLET_HOLDINGS,
-    WALLET_CASH_BALANCE,
-    WALLET_REFRESH_MS,
-)
-from ..utils.binance_rest import get_24hr_ticker
+
+if __package__ is None or __package__ == "":
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(os.path.dirname(current_dir))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    from config import (  # type: ignore
+        THEME,
+        DEFAULT_SYMBOLS,
+        WALLET_HOLDINGS,
+        WALLET_CASH_BALANCE,
+        WALLET_REFRESH_MS,
+    )
+    from utils.binance_rest import get_24hr_ticker  # type: ignore
+else:
+    from ..config import (
+        THEME,
+        DEFAULT_SYMBOLS,
+        WALLET_HOLDINGS,
+        WALLET_CASH_BALANCE,
+        WALLET_REFRESH_MS,
+    )
+    from ..utils.binance_rest import get_24hr_ticker
 
 
 ASSET_DISPLAY_NAMES = {
@@ -41,59 +58,70 @@ class WalletPanel:
         self.asset_code_to_display = {code: label for code, label in self.asset_options}
         self.wallet_action_mode = None
 
+        # Use light theme to match Overview page
+        self.bg = "#f5f7fb"
+        self.surface = "#ffffff"
+        self.panel_border = "#e5e7eb"
+
         self.frame = tk.Frame(
             parent,
-            bg=self.theme["panel"],
+            bg=self.bg,
             padx=18,
             pady=14,
-            highlightbackground=self.theme["panel_border"],
+            highlightbackground=self.panel_border,
             highlightthickness=1,
         )
 
-        header = tk.Frame(self.frame, bg=self.theme["panel"])
-        header.pack(fill=tk.X)
+        header = tk.Frame(self.frame, bg=self.surface)
+        header.pack(fill=tk.X, pady=(0, 12))
         tk.Label(
             header,
-            text="Wallet Overview (Mock)",
-            bg=self.theme["panel"],
-            fg=self.theme["text_primary"],
-            font=("Helvetica", 15, "bold"),
+            text="Wallet Portfolio (Mock)",
+            bg=self.surface,
+            fg="#111827",
+            font=("Helvetica", 18, "bold"),
         ).pack(side=tk.LEFT)
 
         self.total_value_var = tk.StringVar(value="Total: $ --")
         tk.Label(
             header,
             textvariable=self.total_value_var,
-            bg=self.theme["panel"],
-            fg=self.theme["accent_green"],
-            font=("Helvetica", 13, "bold"),
+            bg=self.surface,
+            fg="#16a34a",
+            font=("Helvetica", 15, "bold"),
         ).pack(side=tk.RIGHT)
 
         self._build_exchange_section()
 
-        balances = tk.Frame(self.frame, bg=self.theme["panel"])
+        balances = tk.Frame(self.frame, bg=self.surface)
         balances.pack(fill=tk.X, pady=(10, 0))
         self.cash_var = tk.StringVar(value="USDT Balance: --")
         tk.Label(
             balances,
             textvariable=self.cash_var,
-            bg=self.theme["panel"],
-            fg=self.theme["text_primary"],
-            font=("Helvetica", 12),
+            bg=self.surface,
+            fg="#111827",
+            font=("Helvetica", 12, "bold"),
         ).pack(anchor="w")
 
         style = ttk.Style()
         style.configure(
             "Wallet.Treeview",
-            background=self.theme["panel"],
-            fieldbackground=self.theme["panel"],
-            foreground=self.theme["text_primary"],
+            background=self.surface,
+            fieldbackground=self.surface,
+            foreground="#111827",
+            borderwidth=0,
         )
         style.configure(
             "Wallet.Treeview.Heading",
-            background=self.theme["panel"],
-            foreground=self.theme["text_muted"],
+            background=self.surface,
+            foreground="#6b7280",
             font=("Helvetica", 11, "bold"),
+        )
+        style.map(
+            "Wallet.Treeview",
+            background=[("selected", "#f3f4f6")],
+            foreground=[("selected", "#111827")],
         )
 
         self.tree = ttk.Treeview(
@@ -111,20 +139,22 @@ class WalletPanel:
         self.tree.column("value", width=110, anchor="center")
         self.tree.pack(fill=tk.X, pady=10)
 
-        controls = tk.Frame(self.frame, bg=self.theme["panel"])
-        controls.pack(fill=tk.X, pady=(5, 0))
+        controls = tk.Frame(self.frame, bg=self.surface)
+        controls.pack(fill=tk.X, pady=(10, 0))
         tk.Label(
             controls,
             text="Asset (Coin)",
-            bg=self.theme["panel"],
-            fg=self.theme["text_primary"],
-        ).grid(row=0, column=0, sticky="w")
+            bg=self.surface,
+            fg="#111827",
+            font=("Helvetica", 11, "bold"),
+        ).grid(row=0, column=0, sticky="w", pady=(0, 4))
         tk.Label(
             controls,
             text="Amount",
-            bg=self.theme["panel"],
-            fg=self.theme["text_primary"],
-        ).grid(row=0, column=1, sticky="w")
+            bg=self.surface,
+            fg="#111827",
+            font=("Helvetica", 11, "bold"),
+        ).grid(row=0, column=1, sticky="w", pady=(0, 4))
 
         default_asset = self.asset_options[0][0]
         self.asset_var = tk.StringVar(value=default_asset)
@@ -143,27 +173,73 @@ class WalletPanel:
         tk.Label(
             controls,
             textvariable=self.asset_hint_var,
-            bg=self.theme["panel"],
-            fg=self.theme["text_muted"],
+            bg=self.surface,
+            fg="#6b7280",
             font=("Helvetica", 9),
-        ).grid(row=2, column=0, columnspan=2, sticky="w")
-        self.amount_entry.grid(row=1, column=1, padx=(0, 10), pady=4, sticky="w")
-
-        buttons = tk.Frame(controls, bg=self.theme["panel"])
-        buttons.grid(row=1, column=2, padx=6, sticky="w")
-        ttk.Button(buttons, text="Buy (Mock)", command=lambda: self._execute_trade("BUY")).pack(
-            side=tk.LEFT, padx=(0, 6)
+        ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(2, 0))
+        
+        # Style the entry field
+        self.amount_entry.config(
+            bg="#ffffff",
+            fg="#111827",
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground="#d1d5db",
+            highlightcolor="#3b82f6",
+            insertbackground="#111827",
+            font=("Helvetica", 12)
         )
-        ttk.Button(buttons, text="Sell (Mock)", command=lambda: self._execute_trade("SELL")).pack(side=tk.LEFT)
+        self.amount_entry.grid(row=1, column=1, padx=(0, 10), pady=4, sticky="w", ipady=6)
+
+        buttons = tk.Frame(controls, bg=self.surface)
+        buttons.grid(row=1, column=2, padx=6, sticky="w")
+        
+        # Style buttons to match app design
+        buy_btn = tk.Button(
+            buttons,
+            text="Buy (Mock)",
+            font=("Helvetica", 11, "bold"),
+            bg="#16a34a",
+            fg="white",
+            relief="flat",
+            padx=16,
+            pady=6,
+            command=lambda: self._execute_trade("BUY"),
+            cursor="hand2",
+            activebackground="#15803d",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        buy_btn.pack(side=tk.LEFT, padx=(0, 6))
+        
+        sell_btn = tk.Button(
+            buttons,
+            text="Sell (Mock)",
+            font=("Helvetica", 11, "bold"),
+            bg="#dc2626",
+            fg="white",
+            relief="flat",
+            padx=16,
+            pady=6,
+            command=lambda: self._execute_trade("SELL"),
+            cursor="hand2",
+            activebackground="#b91c1c",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        sell_btn.pack(side=tk.LEFT)
 
         self.status_var = tk.StringVar(value="Create mock orders to rebalance the portfolio")
         tk.Label(
             self.frame,
             textvariable=self.status_var,
-            bg=self.theme["panel"],
-            fg=self.theme["text_muted"],
+            bg=self.surface,
+            fg="#6b7280",
             anchor="w",
-        ).pack(fill=tk.X, pady=(8, 0))
+            font=("Helvetica", 10),
+        ).pack(fill=tk.X, pady=(10, 0))
 
         self._build_deposit_section()
         self._apply_price_update({})
@@ -261,15 +337,16 @@ class WalletPanel:
             self.on_trade(action, asset, amount, price, notional)
 
     def _build_exchange_section(self):
-        card = tk.Frame(self.frame, bg="#f5f5f5", padx=16, pady=14)
-        card.pack(fill=tk.X, pady=(10, 12))
+        card = tk.Frame(self.frame, bg="#f9fafb", padx=18, pady=16, 
+                       highlightthickness=1, highlightbackground="#e5e7eb")
+        card.pack(fill=tk.X, pady=(0, 12))
         tk.Label(
             card,
             text="Exchange",
-            font=("Helvetica", 13, "bold"),
-            fg="#111",
-            bg="#f5f5f5",
-        ).pack(anchor="w")
+            font=("Helvetica", 14, "bold"),
+            fg="#111827",
+            bg="#f9fafb",
+        ).pack(anchor="w", pady=(0, 10))
 
         default_asset = self.asset_options[0][0]
         self.exchange_asset_var = tk.StringVar(value=default_asset)
@@ -277,66 +354,117 @@ class WalletPanel:
         self.exchange_quote_var = tk.StringVar(value="$ -- USD")
         self.exchange_asset_display_var = tk.StringVar(value=self.asset_code_to_display[default_asset])
 
-        display = tk.Frame(card, bg="#f5f5f5")
-        display.pack(fill=tk.X, pady=(6, 8))
-        self.exchange_label_var = tk.StringVar(value=f"1 {self._format_asset_hint(default_asset)} >>>")
+        # Conversion display
+        display = tk.Frame(card, bg="#f9fafb")
+        display.pack(fill=tk.X, pady=(0, 12))
         tk.Label(
             display,
-            textvariable=self.exchange_label_var,
-            font=("Helvetica", 12),
-            fg="#4b5563",
-            bg="#f5f5f5",
+            text="1 unit converts to",
+            font=("Helvetica", 11),
+            fg="#6b7280",
+            bg="#f9fafb",
         ).pack(side=tk.LEFT)
         tk.Label(
             display,
             textvariable=self.exchange_quote_var,
-            font=("Helvetica", 12, "bold"),
-            fg="#4b5563",
-            bg="#f5f5f5",
+            font=("Helvetica", 14, "bold"),
+            fg="#111827",
+            bg="#f9fafb",
         ).pack(side=tk.RIGHT)
 
-        input_box = tk.Frame(card, bg="#f5f5f5")
-        input_box.pack(fill=tk.X, pady=4)
-        asset_frame = tk.Frame(input_box, bg="#fff", bd=0, relief="flat")
-        asset_frame.pack(fill=tk.X)
-        amount_entry = tk.Entry(asset_frame, textvariable=self.exchange_amount_var, bd=0, font=("Helvetica", 13))
-        amount_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(10, 0), pady=6)
+        # Input section
+        input_box = tk.Frame(card, bg="#f9fafb")
+        input_box.pack(fill=tk.X, pady=(0, 10))
+        
+        amount_frame = tk.Frame(input_box, bg="#f9fafb")
+        amount_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        tk.Label(
+            amount_frame,
+            text="Amount",
+            font=("Helvetica", 10, "bold"),
+            fg="#6b7280",
+            bg="#f9fafb",
+        ).pack(anchor="w", pady=(0, 4))
+        
+        asset_frame = tk.Frame(input_box, bg="#f9fafb")
+        asset_frame.pack(side=tk.RIGHT, padx=(12, 0))
+        tk.Label(
+            asset_frame,
+            text="Asset",
+            font=("Helvetica", 10, "bold"),
+            fg="#6b7280",
+            bg="#f9fafb",
+        ).pack(anchor="w", pady=(0, 4))
+        
+        entry_container = tk.Frame(amount_frame, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
+        entry_container.pack(fill=tk.X)
+        amount_entry = tk.Entry(
+            entry_container,
+            textvariable=self.exchange_amount_var,
+            bd=0,
+            font=("Helvetica", 13, "bold"),
+            bg="#ffffff",
+            fg="#111827",
+            highlightthickness=0,
+            insertbackground="#111827"
+        )
+        amount_entry.pack(fill=tk.X, padx=10, pady=8)
+        
         asset_combo = ttk.Combobox(
             asset_frame,
             values=list(self.asset_display_to_code.keys()),
             textvariable=self.exchange_asset_display_var,
             state="readonly",
             width=18,
+            font=("Helvetica", 12, "bold")
         )
-        asset_combo.pack(side=tk.RIGHT, padx=8, pady=6)
+        asset_combo.pack(fill=tk.X)
 
         self.exchange_amount_var.trace_add("write", lambda *_: self._update_exchange_quote())
         asset_combo.bind("<<ComboboxSelected>>", lambda _e: self._on_exchange_asset_selected())
         amount_entry.bind("<FocusOut>", lambda _e: self._update_exchange_quote())
 
-        action_row = tk.Frame(card, bg="#f5f5f5")
-        action_row.pack(fill=tk.X, pady=(4, 4))
-        ttk.Button(action_row, text="Convert to USD", command=self._convert_to_usd).pack(side=tk.RIGHT)
+        # Convert button
+        action_row = tk.Frame(card, bg="#f9fafb")
+        action_row.pack(fill=tk.X, pady=(0, 12))
+        convert_btn = tk.Button(
+            action_row,
+            text="Convert to USD",
+            font=("Helvetica", 11, "bold"),
+            bg="#3b82f6",
+            fg="white",
+            relief="flat",
+            padx=16,
+            pady=8,
+            command=self._convert_to_usd,
+            cursor="hand2",
+            activebackground="#2563eb",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        convert_btn.pack(side=tk.RIGHT)
 
+        # Balance section
         tk.Label(
             card,
             text="Balance",
             font=("Helvetica", 12, "bold"),
-            fg="#111",
-            bg="#f5f5f5",
-        ).pack(anchor="w", pady=(8, 0))
+            fg="#6b7280",
+            bg="#f9fafb",
+        ).pack(anchor="w", pady=(0, 4))
 
-        balance_display = tk.Frame(card, bg="#fff")
-        balance_display.pack(fill=tk.X, pady=(4, 0))
+        balance_display = tk.Frame(card, bg="#ffffff", highlightthickness=1, highlightbackground="#e5e7eb")
+        balance_display.pack(fill=tk.X)
         self.balance_display_var = tk.StringVar(value="$ -- USD")
         tk.Label(
             balance_display,
             textvariable=self.balance_display_var,
-            font=("Helvetica", 13, "bold"),
-            fg="#111",
-            bg="#fff",
+            font=("Helvetica", 16, "bold"),
+            fg="#16a34a",
+            bg="#ffffff",
             anchor="w",
-        ).pack(fill=tk.X, padx=10, pady=8)
+        ).pack(fill=tk.X, padx=12, pady=10)
 
     def _build_deposit_section(self):
         section = tk.Frame(self.frame, bg=self.theme["panel"])
