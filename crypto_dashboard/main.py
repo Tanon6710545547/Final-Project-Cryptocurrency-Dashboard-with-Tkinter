@@ -210,31 +210,25 @@ class CryptoDashboardApp:
         if Image is None or ImageTk is None:
             return None
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        cat = None
-        for filename in (
-            "Subject 3.png",
-            "ChatGPT Image Nov 29 2025 (1).png",
-        ):
-            cat = self._load_logo_image_asset(
-                os.path.join(project_root, filename),
-                target_height=128,
-            )
-            if cat:
-                break
-        wordmark = None
-        for filename in (
-            "MagicEraser_5681129_194136.PNG",
-            "ChatGPT Image Nov 29 2025 (1).png",
-        ):
-            wordmark = self._load_logo_image_asset(
-                os.path.join(project_root, filename),
-                target_height=60,
-            )
-            if wordmark:
-                break
+        cat = self._load_logo_image_asset(
+            os.path.join(project_root, "Subject 3.png"),
+            target_height=138,
+            add_padding=20,
+        ) or self._load_logo_image_asset(
+            os.path.join(project_root, "ChatGPT Image Nov 29 2025 (1).png"),
+            target_height=138,
+            add_padding=20,
+        )
+        wordmark = self._load_logo_image_asset(
+            os.path.join(project_root, "MagicEraser_5681129_194136.PNG"),
+            target_height=60,
+        ) or self._load_logo_image_asset(
+            os.path.join(project_root, "ChatGPT Image Nov 29 2025 (1).png"),
+            target_height=60,
+        )
         if not cat or not wordmark:
             return None
-        spacing = 22
+        spacing = 0
         combined_height = max(cat.height, wordmark.height + 16)
         combined_width = cat.width + spacing + wordmark.width
         composed = Image.new("RGBA", (combined_width, combined_height), (0, 0, 0, 0))
@@ -243,14 +237,24 @@ class CryptoDashboardApp:
         wordmark_y = (combined_height - wordmark.height) // 2 + 2
         composed.paste(wordmark, (cat.width + spacing, wordmark_y), wordmark)
 
-        max_width = 225
+        pad_right = 18
+        if pad_right > 0:
+            padded = Image.new(
+                "RGBA",
+                (composed.width + pad_right, composed.height),
+                (0, 0, 0, 0),
+            )
+            padded.paste(composed, (0, 0), composed)
+            composed = padded
+
+        max_width = 260
         if composed.width > max_width:
             scale = max_width / composed.width
             new_size = (int(composed.width * scale), int(composed.height * scale))
             composed = composed.resize(new_size, Image.LANCZOS)
         return ImageTk.PhotoImage(composed)
 
-    def _load_logo_image_asset(self, path, target_height):
+    def _load_logo_image_asset(self, path, target_height, add_padding=0):
         if not os.path.exists(path):
             return None
         try:
@@ -261,6 +265,14 @@ class CryptoDashboardApp:
         ratio = target_height / img.height
         width = max(1, int(img.width * ratio))
         img = img.resize((width, target_height), Image.LANCZOS)
+        if add_padding:
+            padded = Image.new(
+                "RGBA",
+                (img.width + add_padding * 2, img.height + add_padding * 2),
+                (0, 0, 0, 0),
+            )
+            padded.paste(img, (add_padding, add_padding), img)
+            img = padded
         return img
 
     def _trim_logo_image(self, img):
