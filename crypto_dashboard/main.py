@@ -142,9 +142,38 @@ class CryptoDashboardApp:
         self.root.bind_all("<ButtonRelease-1>",
                            self._stop_scroll_drag, add="+")
         self._set_content_background(THEME["bg"])
-        self.header_title = tk.Label(self.content_frame)
+
+        # Create header bar with dark background
+        self.header_bar = tk.Frame(
+            self.content_frame,
+            bg=THEME["header"],
+            height=80,
+            padx=28,
+            pady=16
+        )
+        self.header_bar.pack(fill=tk.X, side=tk.TOP)
+        self.header_bar.pack_propagate(False)
+
+        # Header title and status in header bar
+        header_content = tk.Frame(self.header_bar, bg=THEME["header"])
+        header_content.pack(fill=tk.X)
+
+        self.header_title = tk.Label(
+            header_content,
+            bg=THEME["header"],
+            fg=THEME["text_primary"],
+            font=("Helvetica", 20, "bold")
+        )
+        self.header_title.pack(side=tk.LEFT)
+
         self.status_label = tk.Label(
-            self.content_frame, textvariable=self.status_var)
+            header_content,
+            textvariable=self.status_var,
+            bg=THEME["header"],
+            fg=THEME["accent_green"],
+            font=("Helvetica", 12, "bold")
+        )
+        self.status_label.pack(side=tk.RIGHT)
 
         self._build_detail_section()
         self._build_transactions_section()
@@ -155,6 +184,7 @@ class CryptoDashboardApp:
             DEFAULT_SYMBOLS,
             on_select=self.switch_symbol,
             theme=THEME,
+            on_trade=self._record_overview_trade,
         )
         self.overview_panel.pack(fill=tk.BOTH, expand=True)
         self.overview_panel.set_active_symbol(self.current_symbol_key)
@@ -182,7 +212,6 @@ class CryptoDashboardApp:
             ("Chart", "detail", self.navigate_detail, False),
             ("Transactions", "transactions", self.navigate_transactions, False),
             ("Wallet", "wallet", self.navigate_wallet, False),
-            ("Alerts", "bell", self.show_alerts_center, False),
         ]
 
         for label, shape, callback, active in nav_items:
@@ -508,6 +537,9 @@ class CryptoDashboardApp:
         self.hide_detail()
         self._hide_transactions_section()
         self._hide_wallet_section()
+        # Show header bar for overview page
+        if hasattr(self, "header_bar") and not self.header_bar.winfo_ismapped():
+            self.header_bar.pack(fill=tk.X, side=tk.TOP)
         self._show_overview_section()
         if hasattr(self, "overview_panel"):
             self._scroll_to_widget(self.overview_panel.frame)
@@ -558,25 +590,7 @@ class CryptoDashboardApp:
         self.detail_container = tk.Frame(
             self.content_frame, bg=CHART_THEME["bg"])
 
-        banner = tk.Frame(self.detail_container,
-                          bg="#0b1220", padx=20, pady=14)
-        banner.pack(fill=tk.X)
-        self.chart_banner_title = tk.Label(
-            banner,
-            text=f"{self.display_symbol} Dashboard",
-            font=("Helvetica", 18, "bold"),
-            fg="#f8fafc",
-            bg="#0b1220",
-        )
-        self.chart_banner_title.pack(side=tk.LEFT)
-        self.chart_banner_status = tk.Label(
-            banner,
-            text=f"CHART • {self.display_symbol} dashboards",
-            font=("Helvetica", 12, "bold"),
-            fg="#34d399",
-            bg="#0b1220",
-        )
-        self.chart_banner_status.pack(side=tk.RIGHT)
+        # Banner removed - no header bar for chart page
 
         detail_header = tk.Frame(
             self.detail_container, bg=CHART_THEME["bg"], padx=15, pady=8)
@@ -698,9 +712,20 @@ class CryptoDashboardApp:
             self.wallet_container,
             theme=THEME,
             on_trade=self._record_mock_trade,
+            on_balance_change=self._on_wallet_balance_change,
         )
         self.wallet_panel.pack(fill=tk.BOTH, expand=True)
         self.wallet_container.pack_forget()
+
+        # Sync initial balance and holdings from wallet to overview
+        if hasattr(self, "overview_panel"):
+            balance, holdings = self.wallet_panel.get_balance_and_holdings()
+            self.overview_panel.sync_from_wallet(balance, holdings)
+
+        # Also sync when wallet panel is shown
+        if hasattr(self, "overview_panel") and hasattr(self, "wallet_panel"):
+            balance, holdings = self.wallet_panel.get_balance_and_holdings()
+            self.overview_panel.sync_from_wallet(balance, holdings)
 
     def _hide_transactions_section(self):
         if hasattr(self, "transactions_container") and self.transactions_container.winfo_ismapped():
@@ -715,6 +740,7 @@ class CryptoDashboardApp:
                 self.wallet_panel.stop()
 
     def _record_mock_trade(self, action, asset, amount, price, notional):
+        """Record trade from wallet panel and sync to overview"""
         if hasattr(self, "transactions_panel"):
             self.transactions_panel.record_user_trade(
                 action, asset, amount, price, notional)
@@ -722,6 +748,30 @@ class CryptoDashboardApp:
         self.status_var.set(
             f"WALLET • {direction} {amount:.4f} {asset} @ {price:,.2f} (value {notional:,.2f})"
         )
+        # Sync wallet data to overview
+        if hasattr(self, "wallet_panel") and hasattr(self, "overview_panel"):
+            balance, holdings = self.wallet_panel.get_balance_and_holdings()
+            self.overview_panel.sync_from_wallet(balance, holdings)
+
+    def _record_overview_trade(self, action, asset, amount, price, notional):
+        """Record trade from overview panel and sync to wallet"""
+        if hasattr(self, "transactions_panel"):
+            self.transactions_panel.record_user_trade(
+                action, asset, amount, price, notional)
+        direction = "Buy" if action == "BUY" else "Sell"
+        self.status_var.set(
+            f"OVERVIEW • {direction} {amount:.4f} {asset} @ {price:,.2f} (value {notional:,.2f})"
+        )
+        # Sync overview data to wallet
+        if hasattr(self, "overview_panel") and hasattr(self, "wallet_panel"):
+            balance, holdings = self.overview_panel.get_balance_and_holdings()
+            self.wallet_panel.sync_from_overview(balance, holdings)
+
+    def _on_wallet_balance_change(self, balance, holdings, total_value):
+        """Callback when wallet balance/total changes - sync to overview in real-time"""
+        if hasattr(self, "overview_panel"):
+            self.overview_panel.sync_from_wallet(
+                balance, holdings, total_value)
 
     def _format_display_name(self, symbol_key):
         symbol_value = DEFAULT_SYMBOLS[symbol_key].upper()
@@ -751,13 +801,7 @@ class CryptoDashboardApp:
         if hasattr(self, "chart_header_label"):
             self.chart_header_label.config(
                 text=f"{self.display_symbol} Chart View")
-        if hasattr(self, "chart_banner_title"):
-            self.chart_banner_title.config(
-                text=f"{self.display_symbol} Dashboard")
-        if hasattr(self, "chart_banner_status"):
-            self.chart_banner_status.config(
-                text=f"CHART • {self.display_symbol} dashboards"
-            )
+        # Banner removed
         if hasattr(self, "chart_symbol_var"):
             self.chart_symbol_var.set(symbol_key)
         if self.details_visible:
@@ -770,6 +814,10 @@ class CryptoDashboardApp:
 
     def start_all(self):
         self.overview_panel.start()
+        # Sync overview with wallet after both are initialized
+        if hasattr(self, "overview_panel") and hasattr(self, "wallet_panel"):
+            balance, holdings = self.wallet_panel.get_balance_and_holdings()
+            self.overview_panel.sync_from_wallet(balance, holdings)
 
     def start_detail_panels(self):
         if self.detail_panels_started:
@@ -793,6 +841,9 @@ class CryptoDashboardApp:
         self._hide_transactions_section()
         self._hide_wallet_section()
         self._hide_overview_section()
+        # Hide header bar for chart page
+        if hasattr(self, "header_bar"):
+            self.header_bar.pack_forget()
         self.detail_container.pack(fill=tk.BOTH, expand=True)
         self._set_content_background(CHART_THEME["bg"])
         self.details_visible = True
@@ -811,6 +862,9 @@ class CryptoDashboardApp:
     def _show_transactions_section(self):
         self.hide_detail()
         self._hide_wallet_section()
+        # Hide header bar for transactions page
+        if hasattr(self, "header_bar"):
+            self.header_bar.pack_forget()
         if hasattr(self, "transactions_container"):
             self._hide_overview_section()
             self.transactions_container.pack(
@@ -824,6 +878,9 @@ class CryptoDashboardApp:
     def _show_wallet_section(self):
         self.hide_detail()
         self._hide_transactions_section()
+        # Hide header bar for wallet page
+        if hasattr(self, "header_bar"):
+            self.header_bar.pack_forget()
         if hasattr(self, "wallet_container"):
             self._hide_overview_section()
             self.wallet_container.pack(

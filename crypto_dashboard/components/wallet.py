@@ -49,10 +49,11 @@ ASSET_DISPLAY_NAMES = {
 class WalletPanel:
     """Mock wallet panel with buy/sell buttons"""
 
-    def __init__(self, parent, theme=None, on_trade=None):
+    def __init__(self, parent, theme=None, on_trade=None, on_balance_change=None):
         self.parent = parent
         self.theme = theme or THEME
         self.on_trade = on_trade
+        self.on_balance_change = on_balance_change
         self.is_running = False
         self.cash_balance = WALLET_CASH_BALANCE
         self.holdings = WALLET_HOLDINGS.copy()
@@ -157,6 +158,11 @@ class WalletPanel:
         if hasattr(self, "sell_holdings_display_var"):
             self._update_sell_holdings_display()
 
+        # Notify overview of balance/total change
+        if callable(self.on_balance_change):
+            self.on_balance_change(
+                self.cash_balance, self.holdings.copy(), total_value)
+
         for row in self.tree.get_children():
             self.tree.delete(row)
 
@@ -191,6 +197,11 @@ class WalletPanel:
         # บังคับให้ UI อัปเดตทันที
         self.frame.update_idletasks()
 
+        # Notify overview of balance/total change
+        if callable(self.on_balance_change):
+            self.on_balance_change(
+                self.cash_balance, self.holdings.copy(), total_value)
+
     def _apply_price_update_immediate(self, values):
         """อัปเดตทันทีโดยไม่ delay สำหรับ deposit/withdraw"""
         self.prices.update(values)
@@ -204,6 +215,11 @@ class WalletPanel:
         self.cash_var.set(f"USDT Balance: $ {self.cash_balance:,.2f}")
         if hasattr(self, "balance_display_var"):
             self.balance_display_var.set(f"$ {self.cash_balance:,.2f} USD")
+
+        # Notify overview of balance/total change
+        if callable(self.on_balance_change):
+            self.on_balance_change(
+                self.cash_balance, self.holdings.copy(), total_value)
 
         # อัปเดต holdings table - แสดงตามที่กำหนด
         if hasattr(self, "tree"):
@@ -1159,6 +1175,23 @@ class WalletPanel:
         if callable(self.on_trade):
             self.on_trade(action, asset, amount, price, notional)
 
+        # Notify overview of balance/total change after trade
+        # (balance already updated via _apply_price_update, but we need to notify here too)
+        if callable(self.on_balance_change):
+            holdings_value = sum(amt * self.prices.get(ast, 0)
+                                 for ast, amt in self.holdings.items())
+            total_value = self.cash_balance + holdings_value
+            self.on_balance_change(
+                self.cash_balance, self.holdings.copy(), total_value)
+
+        # Notify overview of balance/total change after trade
+        if callable(self.on_balance_change):
+            holdings_value = sum(amt * self.prices.get(ast, 0)
+                                 for ast, amt in self.holdings.items())
+            total_value = self.cash_balance + holdings_value
+            self.on_balance_change(
+                self.cash_balance, self.holdings.copy(), total_value)
+
     def _build_asset_options(self):
         options = []
         for asset in self.holdings.keys():
@@ -1173,3 +1206,20 @@ class WalletPanel:
     def _format_asset_hint(self, asset):
         name = self._get_asset_display_name(asset)
         return f"{name} ({asset})" if name != asset else asset
+
+    def sync_from_overview(self, balance, holdings):
+        """Sync balance and holdings from overview panel"""
+        self.cash_balance = balance
+        # Update holdings for all assets
+        for asset in self.holdings.keys():
+            self.holdings[asset] = holdings.get(asset, 0.0)
+        # Update displays
+        self._update_buy_holdings_display()
+        self._update_sell_holdings_display()
+        self._update_balance_only()
+        # Update holdings table
+        self._apply_price_update({})
+
+    def get_balance_and_holdings(self):
+        """Get current balance and holdings for syncing"""
+        return self.cash_balance, self.holdings.copy()

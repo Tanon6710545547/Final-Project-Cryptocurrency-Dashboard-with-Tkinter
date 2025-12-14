@@ -90,11 +90,12 @@ SPARKLINE_STYLES = {
 class OverviewPanel:
     """AquaNeko inspired overview with favorites, live market, and exchange card"""
 
-    def __init__(self, parent, symbols, on_select, theme=None):
+    def __init__(self, parent, symbols, on_select, theme=None, on_trade=None):
         self.parent = parent
         self.symbols = symbols
         self.on_select = on_select
         self.theme = theme or THEME
+        self.on_trade = on_trade
         self.is_running = False
         # Use light background for overview section (overview has its own light theme)
         self.bg = "#f5f7fb"
@@ -118,7 +119,7 @@ class OverviewPanel:
         self.mock_total = 0.0
         # Mock holdings for buy/sell functionality
         self.mock_holdings = {symbol: 0.0 for symbol in self.symbols.keys()}
-        
+
         # Create asset display mapping (similar to wallet)
         self.asset_code_to_display = {}
         self.asset_display_to_code = {}
@@ -139,7 +140,7 @@ class OverviewPanel:
                 f for f in DEFAULT_FAVORITES if f in self.symbols]
 
         self.frame = tk.Frame(parent, bg=self.bg, padx=28, pady=16)
-        self.frame.pack(fill=tk.BOTH, expand=True)
+        self.frame.pack(fill=tk.BOTH, expand=True, pady=(16, 0))
         tk.Label(
             self.frame,
             text="Overview",
@@ -161,8 +162,8 @@ class OverviewPanel:
         grid.columnconfigure(1, weight=1, uniform="col")
         # Top row for favorites and chart
         grid.rowconfigure(0, weight=1, minsize=300)
-        # Bottom row for live market and exchange
-        grid.rowconfigure(1, weight=3, minsize=400)
+        # Bottom row for live market and exchange - expand to fill dark space
+        grid.rowconfigure(1, weight=10, minsize=500)
 
         favorites_holder = tk.Frame(grid, bg=self.bg)
         favorites_holder.grid(row=0, column=0, padx=(
@@ -177,11 +178,13 @@ class OverviewPanel:
         live_holder = tk.Frame(grid, bg=self.bg)
         live_holder.grid(row=1, column=0, padx=(
             0, 12), pady=(0, 0), sticky="nsew")
+        live_holder.grid_rowconfigure(0, weight=1)
         self._build_live_market(live_holder)
 
         exchange_holder = tk.Frame(grid, bg=self.bg)
         exchange_holder.grid(row=1, column=1, padx=(
             12, 0), pady=(0, 0), sticky="nsew")
+        exchange_holder.grid_rowconfigure(0, weight=1)
         self._build_exchange_card(exchange_holder)
 
     def _build_favorites(self, parent):
@@ -549,7 +552,7 @@ class OverviewPanel:
 
     def _build_live_market(self, parent):
         card = tk.Frame(parent, bg=self.surface, padx=18, pady=10)
-        card.pack(fill=tk.BOTH, expand=True)
+        card.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
         tk.Label(card, text="Live Market", font=("Helvetica", 16, "bold"),
                  bg=self.surface, fg="#111827").pack(anchor="w", pady=(0, 6))
 
@@ -685,26 +688,69 @@ class OverviewPanel:
         # Store canvas reference for cleanup
         self.market_canvas = market_canvas
 
+        # Create header row with column labels
+        header_row = tk.Frame(rows_container, bg=self.surface)
+        header_row.pack(fill=tk.X, pady=(0, 8))
+        # Configure all columns to have equal weight
+        header_row.columnconfigure(0, weight=1, uniform="equal")
+        header_row.columnconfigure(1, weight=1, uniform="equal")
+        header_row.columnconfigure(2, weight=1, uniform="equal")
+        header_row.columnconfigure(3, weight=1, uniform="equal")
+
+        # Header labels
+        tk.Label(header_row, text="Pair", font=("Helvetica", 11, "bold"),
+                 bg=self.surface, fg="#6b7280").grid(row=0, column=0, sticky="w")
+        tk.Label(header_row, text="Change", font=("Helvetica", 11, "bold"),
+                 bg=self.surface, fg="#6b7280").grid(row=0, column=1, sticky="w")
+        tk.Label(header_row, text="Price", font=("Helvetica", 11, "bold"),
+                 bg=self.surface, fg="#6b7280").grid(row=0, column=2, sticky="w")
+        tk.Label(header_row, text="Chart", font=("Helvetica", 11, "bold"),
+                 bg=self.surface, fg="#6b7280").grid(row=0, column=3, sticky="w")
+
+        # Header separator line
+        separator = tk.Frame(header_row, bg="#e5e7eb", height=1)
+        separator.grid(row=1, column=0, columnspan=4, sticky="ew", pady=(4, 0))
+
         # Create rows for each symbol
         for idx, symbol in enumerate(sorted(self.symbols.keys())):
             row = tk.Frame(rows_container, bg=self.surface,
                            pady=10, cursor="hand2")
             row.pack(fill=tk.X, pady=2)
-            row.columnconfigure(2, weight=1)
+            # Configure all columns to have equal weight
+            row.columnconfigure(0, weight=1, uniform="equal")
+            row.columnconfigure(1, weight=1, uniform="equal")
+            row.columnconfigure(2, weight=1, uniform="equal")
+            row.columnconfigure(3, weight=1, uniform="equal")
             row.bind("<Button-1>", lambda _e,
                      s=symbol: self._handle_symbol_select(s))
-            title = tk.Label(row, text=f"{symbol} / USDT", font=(
+
+            # Column 0: Trading pair
+            pair_frame = tk.Frame(row, bg=self.surface)
+            pair_frame.grid(row=0, column=0, sticky="ew")
+            title = tk.Label(pair_frame, text=f"{symbol} / USDT", font=(
                 "Helvetica", 12, "bold"), bg=self.surface, fg="#111827")
-            title.grid(row=0, column=0, sticky="w")
-            change = tk.Label(row, text="--", font=("Helvetica",
+            title.pack(side=tk.LEFT)
+
+            # Column 1: Change percentage
+            change_frame = tk.Frame(row, bg=self.surface)
+            change_frame.grid(row=0, column=1, sticky="ew")
+            change = tk.Label(change_frame, text="--", font=("Helvetica",
                               12, "bold"), bg=self.surface, fg="#16a34a")
-            change.grid(row=0, column=1, padx=20, sticky="w")
-            price = tk.Label(row, text="--", font=("Helvetica",
+            change.pack(side=tk.LEFT)
+
+            # Column 2: Price
+            price_frame = tk.Frame(row, bg=self.surface)
+            price_frame.grid(row=0, column=2, sticky="ew")
+            price = tk.Label(price_frame, text="--", font=("Helvetica",
                              12, "bold"), bg=self.surface, fg="#111827")
-            price.grid(row=0, column=2, sticky="w")
-            canvas = tk.Canvas(row, width=180, height=50,
+            price.pack(side=tk.LEFT)
+
+            # Column 3: Sparkline canvas
+            canvas_frame = tk.Frame(row, bg=self.surface)
+            canvas_frame.grid(row=0, column=3, sticky="ew")
+            canvas = tk.Canvas(canvas_frame, width=180, height=50,
                                bg=self.surface, highlightthickness=0)
-            canvas.grid(row=0, column=3, padx=(10, 0), sticky="e")
+            canvas.pack(side=tk.LEFT)
 
             # Bind mousewheel and enter/leave to row and all its children
             bind_mousewheel(row)
@@ -712,6 +758,10 @@ class OverviewPanel:
             bind_mousewheel(change)
             bind_mousewheel(price)
             bind_mousewheel(canvas)
+            bind_mousewheel(pair_frame)
+            bind_mousewheel(change_frame)
+            bind_mousewheel(price_frame)
+            bind_mousewheel(canvas_frame)
             row.bind("<Enter>", on_enter)
             row.bind("<Leave>", on_leave)
 
@@ -722,89 +772,94 @@ class OverviewPanel:
     def _build_exchange_card(self, parent):
         card = tk.Frame(parent, bg="#f9fafb", padx=18, pady=16,
                         highlightthickness=1, highlightbackground="#e5e7eb")
-        card.pack(fill=tk.BOTH, expand=True)
+        card.pack(fill=tk.BOTH, expand=True, pady=(16, 0))
         tk.Label(
             card,
             text="Exchange",
             font=("Helvetica", 14, "bold"),
             fg="#111827",
             bg="#f9fafb",
-        ).pack(anchor="w", pady=(0, 10))
+        ).pack(anchor="w", pady=(0, 12))
 
         default_asset = self.chart_symbol
         self.exchange_asset_display_var = tk.StringVar(
             value=self.asset_code_to_display.get(default_asset, f"{default_asset} • {default_asset}"))
 
-        # Buy/Sell section (inspired from Wallet) - improved UI with card
-        trade_card = tk.Frame(card, bg="#f9fafb", padx=14, pady=14,
-                              highlightthickness=1, highlightbackground="#e5e7eb")
-        trade_card.pack(fill=tk.BOTH, expand=True, pady=(0, 12))
+        # Buy section (Top) - separated from Sell - made more compact
+        buy_section = tk.Frame(card, bg="#f9fafb", padx=0, pady=4,
+                               highlightthickness=1, highlightbackground="#e5e7eb")
+        buy_section.pack(fill=tk.X, pady=(0, 4))
 
-        # Section title
+        # Buy section title
         tk.Label(
-            trade_card,
-            text="Trade",
-            font=("Helvetica", 14, "bold"),
+            buy_section,
+            text="Buy",
+            font=("Helvetica", 11, "bold"),
             bg="#f9fafb",
             fg="#111827",
-        ).pack(anchor="w", pady=(0, 12))
+        ).pack(anchor="w", padx=12, pady=(0, 4))
 
-        # Input section with better layout
-        input_row = tk.Frame(trade_card, bg="#f9fafb")
-        input_row.pack(fill=tk.X, pady=(0, 10))
+        # Buy input row
+        buy_input_row = tk.Frame(buy_section, bg="#f9fafb")
+        buy_input_row.pack(fill=tk.X, padx=12, pady=(6, 3))
 
-        # Asset selector with holdings display
-        asset_col = tk.Frame(input_row, bg="#f9fafb")
-        asset_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
+        # Asset selector for buy
+        buy_asset_col = tk.Frame(buy_input_row, bg="#f9fafb")
+        buy_asset_col.pack(side=tk.LEFT, fill=tk.BOTH,
+                           expand=True, padx=(0, 8))
         tk.Label(
-            asset_col,
+            buy_asset_col,
             text="Asset (Coin)",
             bg="#f9fafb",
             fg="#6b7280",
-            font=("Helvetica", 10, "bold"),
-        ).pack(anchor="w", pady=(0, 4))
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w", pady=(0, 2))
 
-        asset_selector_frame = tk.Frame(
-            asset_col, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
-        asset_selector_frame.pack(fill=tk.X)
-        trade_asset_combo = ttk.Combobox(
-            asset_selector_frame,
-            values=list(self.symbols.keys()),
-            textvariable=self.exchange_asset_var,
+        buy_asset_selector_frame = tk.Frame(
+            buy_asset_col, bg="#ffffff", highlightthickness=2, highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        buy_asset_selector_frame.pack(fill=tk.X)
+        self.buy_asset_display_var = tk.StringVar(
+            value=self.exchange_asset_display_var.get())
+        buy_asset_combo = ttk.Combobox(
+            buy_asset_selector_frame,
+            values=list(self.asset_display_to_code.keys()),
+            textvariable=self.buy_asset_display_var,
             state="readonly",
             width=15,
             font=("Helvetica", 12, "bold")
         )
-        trade_asset_combo.pack(fill=tk.X, padx=10, pady=8)
-        trade_asset_combo.bind("<<ComboboxSelected>>",
-                               lambda _e: self._handle_exchange_select())
+        buy_asset_combo.pack(fill=tk.X, padx=6, pady=4)
+        buy_asset_combo.bind("<<ComboboxSelected>>",
+                             lambda _e: self._update_buy_holdings_display())
 
-        # Holdings display
-        self.holdings_display_var = tk.StringVar(value="Holdings: 0.000000")
+        # Holdings display for buy
+        self.buy_holdings_display_var = tk.StringVar(
+            value="Holdings: 0.000000")
         tk.Label(
-            asset_col,
-            textvariable=self.holdings_display_var,
+            buy_asset_col,
+            textvariable=self.buy_holdings_display_var,
             bg="#f9fafb",
             fg="#6b7280",
-            font=("Helvetica", 9),
-        ).pack(anchor="w", pady=(4, 0))
+            font=("Helvetica", 8),
+        ).pack(anchor="w", pady=(2, 0))
 
-        # Amount input
-        amount_col = tk.Frame(input_row, bg="#f9fafb")
-        amount_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 8))
+        # Amount input for buy
+        buy_amount_col = tk.Frame(buy_input_row, bg="#f9fafb")
+        buy_amount_col.pack(side=tk.LEFT, fill=tk.BOTH,
+                            expand=True, padx=(8, 8))
         tk.Label(
-            amount_col,
+            buy_amount_col,
             text="Amount",
             bg="#f9fafb",
             fg="#6b7280",
-            font=("Helvetica", 10, "bold"),
-        ).pack(anchor="w", pady=(0, 4))
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w", pady=(0, 2))
 
-        amount_entry_frame = tk.Frame(
-            amount_col, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
-        amount_entry_frame.pack(fill=tk.X)
-        trade_amount_entry = tk.Entry(
-            amount_entry_frame,
+        buy_amount_entry_frame = tk.Frame(
+            buy_amount_col, bg="#ffffff", highlightthickness=2, highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        buy_amount_entry_frame.pack(fill=tk.X)
+        self.buy_amount_entry = tk.Entry(
+            buy_amount_entry_frame,
             bd=0,
             font=("Helvetica", 12, "bold"),
             bg="#ffffff",
@@ -813,76 +868,196 @@ class OverviewPanel:
             highlightthickness=0,
             insertbackground="#111827"
         )
-        trade_amount_entry.pack(fill=tk.X, padx=10, pady=8)
+        self.buy_amount_entry.pack(fill=tk.X, padx=6, pady=6)
 
-        # Buy/Sell buttons
-        buttons_col = tk.Frame(input_row, bg="#f9fafb")
-        buttons_col.pack(side=tk.LEFT, padx=(8, 0))
+        # Price display for buy (1 crypto = X USD)
+        self.buy_price_display_var = tk.StringVar(value="1 BTC = $0.00")
         tk.Label(
-            buttons_col,
-            text=" ",
+            buy_amount_col,
+            textvariable=self.buy_price_display_var,
             bg="#f9fafb",
-            font=("Helvetica", 10, "bold"),
-        ).pack(anchor="w", pady=(0, 4))  # Spacer for alignment
+            fg="#6b7280",
+            font=("Helvetica", 8),
+        ).pack(anchor="w", pady=(2, 0))
 
-        buttons = tk.Frame(buttons_col, bg="#f9fafb")
-        buttons.pack()
+        # Buy button - same size as amount field and aligned
+        buy_button_col = tk.Frame(buy_input_row, bg="#f9fafb")
+        buy_button_col.pack(side=tk.LEFT, padx=(8, 0))
 
+        # Button frame to match amount entry frame height - สีเทาเหมือนช่อง input
+        buy_btn_frame = tk.Frame(buy_button_col, bg="#ffffff", highlightthickness=2,
+                                 highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        buy_btn_frame.pack(fill=tk.BOTH, expand=True)
         buy_btn = tk.Button(
-            buttons,
-            text="Buy (Mock)",
-            font=("Helvetica", 11, "bold"),
-            bg="#16a34a",
-            fg="white",
+            buy_btn_frame,
+            text="Buy",
+            font=("Helvetica", 9, "bold"),
+            bg="#f3f4f6",
+            fg="#111827",
             relief="flat",
-            padx=20,
-            pady=8,
-            command=lambda: self._execute_trade("BUY", trade_amount_entry),
+            padx=12,
+            pady=4,
+            command=lambda: self._execute_trade_from_exchange(
+                "BUY", self.buy_amount_entry, self.buy_asset_display_var),
             cursor="hand2",
-            activebackground="#15803d",
-            activeforeground="white",
+            activebackground="#f3f4f6",
+            activeforeground="#111827",
             bd=0,
             highlightthickness=0
         )
-        buy_btn.pack(side=tk.LEFT, padx=(0, 6))
+        buy_btn.pack(fill=tk.BOTH, expand=True, padx=6, pady=4)
 
-        sell_btn = tk.Button(
-            buttons,
-            text="Sell (Mock)",
-            font=("Helvetica", 11, "bold"),
-            bg="#dc2626",
-            fg="white",
-            relief="flat",
-            padx=20,
-            pady=8,
-            command=lambda: self._execute_trade("SELL", trade_amount_entry),
-            cursor="hand2",
-            activebackground="#b91c1c",
-            activeforeground="white",
-            bd=0,
-            highlightthickness=0
-        )
-        sell_btn.pack(side=tk.LEFT)
-
-        # Status message
-        self.exchange_status_var = tk.StringVar(
-            value="Create mock orders to rebalance the portfolio")
+        # Status message for buy
+        self.buy_status_var = tk.StringVar(value="")
         tk.Label(
-            trade_card,
-            textvariable=self.exchange_status_var,
+            buy_section,
+            textvariable=self.buy_status_var,
             bg="#f9fafb",
             fg="#6b7280",
             anchor="w",
-            font=("Helvetica", 10),
-        ).pack(fill=tk.X, pady=(8, 0))
+            font=("Helvetica", 8),
+        ).pack(fill=tk.X, padx=12, pady=(3, 4))
 
-        # Store references
-        self.trade_amount_entry = trade_amount_entry
-        self.trade_asset_combo = trade_asset_combo
+        # Sell section (Bottom) - separated from Buy - made more compact
+        sell_section = tk.Frame(card, bg="#f9fafb", padx=0, pady=4,
+                                highlightthickness=1, highlightbackground="#e5e7eb")
+        sell_section.pack(fill=tk.X, pady=(0, 0))
 
-        # Total and Balance section - side by side with separate borders (inspired from Wallet)
-        total_balance_row = tk.Frame(trade_card, bg="#f9fafb")
-        total_balance_row.pack(fill=tk.X, pady=(12, 0))
+        # Sell section title
+        tk.Label(
+            sell_section,
+            text="Sell",
+            font=("Helvetica", 11, "bold"),
+            bg="#f9fafb",
+            fg="#111827",
+        ).pack(anchor="w", padx=12, pady=(0, 4))
+
+        # Sell input row
+        sell_input_row = tk.Frame(sell_section, bg="#f9fafb")
+        sell_input_row.pack(fill=tk.X, padx=12, pady=(6, 3))
+
+        # Asset selector for sell
+        sell_asset_col = tk.Frame(sell_input_row, bg="#f9fafb")
+        sell_asset_col.pack(side=tk.LEFT, fill=tk.BOTH,
+                            expand=True, padx=(0, 8))
+        tk.Label(
+            sell_asset_col,
+            text="Asset (Coin)",
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w", pady=(0, 2))
+
+        sell_asset_selector_frame = tk.Frame(
+            sell_asset_col, bg="#ffffff", highlightthickness=2, highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        sell_asset_selector_frame.pack(fill=tk.X)
+        self.sell_asset_display_var = tk.StringVar(
+            value=self.exchange_asset_display_var.get())
+        sell_asset_combo = ttk.Combobox(
+            sell_asset_selector_frame,
+            values=list(self.asset_display_to_code.keys()),
+            textvariable=self.sell_asset_display_var,
+            state="readonly",
+            width=15,
+            font=("Helvetica", 12, "bold")
+        )
+        sell_asset_combo.pack(fill=tk.X, padx=6, pady=4)
+        sell_asset_combo.bind("<<ComboboxSelected>>",
+                              lambda _e: self._update_sell_holdings_display())
+
+        # Holdings display for sell
+        self.sell_holdings_display_var = tk.StringVar(
+            value="Holdings: 0.000000")
+        tk.Label(
+            sell_asset_col,
+            textvariable=self.sell_holdings_display_var,
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 8),
+        ).pack(anchor="w", pady=(2, 0))
+
+        # Amount input for sell
+        sell_amount_col = tk.Frame(sell_input_row, bg="#f9fafb")
+        sell_amount_col.pack(side=tk.LEFT, fill=tk.BOTH,
+                             expand=True, padx=(8, 8))
+        tk.Label(
+            sell_amount_col,
+            text="Amount",
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 9, "bold"),
+        ).pack(anchor="w", pady=(0, 2))
+
+        sell_amount_entry_frame = tk.Frame(
+            sell_amount_col, bg="#ffffff", highlightthickness=2, highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        sell_amount_entry_frame.pack(fill=tk.X)
+        self.sell_amount_entry = tk.Entry(
+            sell_amount_entry_frame,
+            bd=0,
+            font=("Helvetica", 12, "bold"),
+            bg="#ffffff",
+            fg="#111827",
+            relief="flat",
+            highlightthickness=0,
+            insertbackground="#111827"
+        )
+        self.sell_amount_entry.pack(fill=tk.X, padx=6, pady=6)
+
+        # Price display for sell (1 crypto = X USD)
+        self.sell_price_display_var = tk.StringVar(value="1 BTC = $0.00")
+        tk.Label(
+            sell_amount_col,
+            textvariable=self.sell_price_display_var,
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 8),
+        ).pack(anchor="w", pady=(2, 0))
+
+        # Sell button - same size as amount field and aligned
+        sell_button_col = tk.Frame(sell_input_row, bg="#f9fafb")
+        sell_button_col.pack(side=tk.LEFT, padx=(8, 0))
+
+        # Button frame to match amount entry frame height - สีเทาเหมือนช่อง input
+        sell_btn_frame = tk.Frame(sell_button_col, bg="#ffffff", highlightthickness=2,
+                                  highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        sell_btn_frame.pack(fill=tk.BOTH, expand=True)
+        sell_btn = tk.Button(
+            sell_btn_frame,
+            text="Sell",
+            font=("Helvetica", 9, "bold"),
+            bg="#f3f4f6",
+            fg="#111827",
+            relief="flat",
+            padx=12,
+            pady=4,
+            command=lambda: self._execute_trade_from_exchange(
+                "SELL", self.sell_amount_entry, self.sell_asset_display_var),
+            cursor="hand2",
+            activebackground="#f3f4f6",
+            activeforeground="#111827",
+            bd=0,
+            highlightthickness=0
+        )
+        sell_btn.pack(fill=tk.BOTH, expand=True, padx=6, pady=4)
+
+        # Status message for sell
+        self.sell_status_var = tk.StringVar(value="")
+        tk.Label(
+            sell_section,
+            textvariable=self.sell_status_var,
+            bg="#f9fafb",
+            fg="#6b7280",
+            anchor="w",
+            font=("Helvetica", 8),
+        ).pack(fill=tk.X, padx=12, pady=(3, 4))
+
+        # Initialize holdings displays
+        self._update_buy_holdings_display()
+        self._update_sell_holdings_display()
+
+        # Total and Balance section - side by side with separate borders
+        total_balance_row = tk.Frame(card, bg="#f9fafb")
+        total_balance_row.pack(fill=tk.X, pady=(4, 0))
 
         # Total section
         total_frame = tk.Frame(total_balance_row, bg="#f9fafb")
@@ -933,6 +1108,13 @@ class OverviewPanel:
             anchor="w",
         ).pack(fill=tk.X, padx=12, pady=10)
 
+        # Initialize total and balance
+        self._calculate_mock_total()
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
+
     def _handle_symbol_select(self, symbol):
         self.chart_symbol = symbol
         self.exchange_asset_var.set(symbol)
@@ -949,18 +1131,133 @@ class OverviewPanel:
             self._update_exchange_quote()
             self._update_holdings_display()
             self.on_select(symbol)
-            self.set_active_symbol(symbol)
+        self.set_active_symbol(symbol)
 
     def _update_holdings_display(self):
         """Update holdings display when asset is selected"""
-        if hasattr(self, "holdings_display_var"):
-            symbol = self.exchange_asset_var.get()
-            if symbol and symbol in self.symbols:
-                holdings = self.mock_holdings.get(symbol, 0.0)
-                self.holdings_display_var.set(
-                    f"Holdings: {holdings:.6f} {symbol}")
+        self._update_buy_holdings_display()
+        self._update_sell_holdings_display()
+
+    def _update_buy_holdings_display(self):
+        """Update holdings display for buy section"""
+        if hasattr(self, "buy_holdings_display_var"):
+            asset_display = self.buy_asset_display_var.get() if hasattr(
+                self, "buy_asset_display_var") else ""
+            if asset_display:
+                asset = self.asset_display_to_code.get(asset_display)
+                if asset:
+                    holdings = self.mock_holdings.get(asset, 0.0)
+                    self.buy_holdings_display_var.set(
+                        f"Holdings: {holdings:.6f} {asset}")
+                    # Update price display (1 crypto = X USD)
+                    if hasattr(self, "buy_price_display_var"):
+                        price = self.latest_prices.get(asset, 0)
+                        self.buy_price_display_var.set(
+                            f"1 {asset} = ${price:,.2f}")
+                else:
+                    self.buy_holdings_display_var.set("Holdings: 0.000000")
+                    if hasattr(self, "buy_price_display_var"):
+                        self.buy_price_display_var.set("1 BTC = $0.00")
             else:
-                self.holdings_display_var.set("Holdings: 0.000000")
+                self.buy_holdings_display_var.set("Holdings: 0.000000")
+                if hasattr(self, "buy_price_display_var"):
+                    self.buy_price_display_var.set("1 BTC = $0.00")
+
+    def _update_sell_holdings_display(self):
+        """Update holdings display for sell section"""
+        if hasattr(self, "sell_holdings_display_var"):
+            asset_display = self.sell_asset_display_var.get() if hasattr(
+                self, "sell_asset_display_var") else ""
+            if asset_display:
+                asset = self.asset_display_to_code.get(asset_display)
+                if asset:
+                    holdings = self.mock_holdings.get(asset, 0.0)
+                    self.sell_holdings_display_var.set(
+                        f"Holdings: {holdings:.6f} {asset}")
+                    # Update price display (1 crypto = X USD)
+                    if hasattr(self, "sell_price_display_var"):
+                        price = self.latest_prices.get(asset, 0)
+                        self.sell_price_display_var.set(
+                            f"1 {asset} = ${price:,.2f}")
+                else:
+                    self.sell_holdings_display_var.set("Holdings: 0.000000")
+                    if hasattr(self, "sell_price_display_var"):
+                        self.sell_price_display_var.set("1 BTC = $0.00")
+            else:
+                self.sell_holdings_display_var.set("Holdings: 0.000000")
+                if hasattr(self, "sell_price_display_var"):
+                    self.sell_price_display_var.set("1 BTC = $0.00")
+
+    def _execute_trade_from_exchange(self, action, amount_entry, asset_display_var):
+        """Execute buy/sell trade from exchange section (similar to wallet)"""
+        try:
+            amount = float(amount_entry.get())
+        except (TypeError, ValueError):
+            status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
+            if hasattr(self, status_var):
+                status_var.set("Enter the amount in numeric form")
+            return
+        if amount <= 0:
+            status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
+            if hasattr(self, status_var):
+                status_var.set("Amount must be greater than 0")
+            return
+
+        asset_display = asset_display_var.get()
+        asset = self.asset_display_to_code.get(asset_display)
+        if not asset:
+            status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
+            if hasattr(self, status_var):
+                status_var.set("Please select an asset")
+            return
+
+        price = self.latest_prices.get(asset, 0)
+        if price <= 0:
+            status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
+            if hasattr(self, status_var):
+                status_var.set("Market price not available yet, try again")
+            return
+
+        notional = amount * price
+        if action == "BUY":
+            if notional > self.mock_balance:
+                if hasattr(self, "buy_status_var"):
+                    self.buy_status_var.set("Insufficient USDT balance")
+                return
+            self.mock_balance -= notional
+            self.mock_holdings[asset] = self.mock_holdings.get(
+                asset, 0) + amount
+            if hasattr(self, "buy_status_var"):
+                self.buy_status_var.set(
+                    f"Bought {amount:.6f} {asset} @ ${price:,.2f} (mock)")
+        else:
+            holding = self.mock_holdings.get(asset, 0)
+            if amount > holding:
+                if hasattr(self, "sell_status_var"):
+                    self.sell_status_var.set("Not enough holdings to sell")
+                return
+            self.mock_holdings[asset] = holding - amount
+            self.mock_balance += notional
+            if hasattr(self, "sell_status_var"):
+                self.sell_status_var.set(
+                    f"Sold {amount:.6f} {asset} @ ${price:,.2f} (mock)")
+
+        amount_entry.delete(0, tk.END)
+
+        # Update holdings displays
+        self._update_buy_holdings_display()
+        self._update_sell_holdings_display()
+
+        # Call trade callback if available
+        if callable(self.on_trade):
+            self.on_trade(action, asset, amount, price, notional)
+
+        # Update Total and Balance
+        self._calculate_mock_total()
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
 
     def _on_chart_selector_change(self):
         symbol = self.chart_selector_var.get()
@@ -1052,6 +1349,17 @@ class OverviewPanel:
 
         # Update exchange quote when prices change
         self._update_exchange_quote()
+        # Update buy/sell holdings displays if they exist
+        if hasattr(self, "buy_holdings_display_var"):
+            self._update_buy_holdings_display()
+        if hasattr(self, "sell_holdings_display_var"):
+            self._update_sell_holdings_display()
+        # Update total
+        self._calculate_mock_total()
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
 
         # Update Total and Balance displays
         self._calculate_mock_total()
@@ -1325,6 +1633,29 @@ class OverviewPanel:
             price = self.latest_prices.get(symbol, 0)
             total += amount * price
         self.mock_total = total
+
+    def sync_from_wallet(self, balance, holdings, total_value=None):
+        """Sync balance and holdings from wallet panel"""
+        self.mock_balance = balance
+        # Update holdings for all symbols
+        for symbol in self.symbols.keys():
+            self.mock_holdings[symbol] = holdings.get(symbol, 0.0)
+        # Update displays
+        self._update_buy_holdings_display()
+        self._update_sell_holdings_display()
+        # Use provided total_value if available, otherwise calculate
+        if total_value is not None:
+            self.mock_total = total_value
+        else:
+            self._calculate_mock_total()
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
+
+    def get_balance_and_holdings(self):
+        """Get current balance and holdings for syncing"""
+        return self.mock_balance, self.mock_holdings.copy()
 
     def set_active_symbol(self, symbol_key):
         self.chart_symbol = symbol_key
