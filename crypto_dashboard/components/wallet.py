@@ -298,9 +298,9 @@ class WalletPanel:
             value=self.asset_code_to_display[default_asset])
 
         # Buy section (Top) - separated from Sell - made more compact
-        buy_section = tk.Frame(card, bg="#f9fafb", padx=0, pady=6,
+        buy_section = tk.Frame(card, bg="#f9fafb", padx=0, pady=4,
                                highlightthickness=1, highlightbackground="#e5e7eb")
-        buy_section.pack(fill=tk.X, pady=(0, 3))
+        buy_section.pack(fill=tk.X, pady=(0, 0))
 
         # Buy section title
         tk.Label(
@@ -313,7 +313,7 @@ class WalletPanel:
 
         # Buy input row
         buy_input_row = tk.Frame(buy_section, bg="#f9fafb")
-        buy_input_row.pack(fill=tk.X, padx=12, pady=(10, 4))
+        buy_input_row.pack(fill=tk.X, padx=12, pady=(6, 3))
 
         # Asset selector for buy
         buy_asset_col = tk.Frame(buy_input_row, bg="#f9fafb")
@@ -406,7 +406,7 @@ class WalletPanel:
         buy_btn_frame.pack(fill=tk.BOTH, expand=True)
         buy_btn = tk.Button(
             buy_btn_frame,
-            text="Buy (Mock)",
+            text="Buy",
             font=("Helvetica", 9, "bold"),
             bg="#f3f4f6",
             fg="#111827",
@@ -432,10 +432,10 @@ class WalletPanel:
             fg="#6b7280",
             anchor="w",
             font=("Helvetica", 8),
-        ).pack(fill=tk.X, padx=12, pady=(2, 6))
+        ).pack(fill=tk.X, padx=12, pady=(3, 4))
 
         # Sell section (Bottom) - separated from Buy - made more compact
-        sell_section = tk.Frame(card, bg="#f9fafb", padx=0, pady=6,
+        sell_section = tk.Frame(card, bg="#f9fafb", padx=0, pady=4,
                                 highlightthickness=1, highlightbackground="#e5e7eb")
         sell_section.pack(fill=tk.X, pady=(0, 0))
 
@@ -450,7 +450,7 @@ class WalletPanel:
 
         # Sell input row
         sell_input_row = tk.Frame(sell_section, bg="#f9fafb")
-        sell_input_row.pack(fill=tk.X, padx=12, pady=(10, 4))
+        sell_input_row.pack(fill=tk.X, padx=12, pady=(6, 3))
 
         # Asset selector for sell
         sell_asset_col = tk.Frame(sell_input_row, bg="#f9fafb")
@@ -543,7 +543,7 @@ class WalletPanel:
         sell_btn_frame.pack(fill=tk.BOTH, expand=True)
         sell_btn = tk.Button(
             sell_btn_frame,
-            text="Sell (Mock)",
+            text="Sell",
             font=("Helvetica", 9, "bold"),
             bg="#f3f4f6",
             fg="#111827",
@@ -569,7 +569,7 @@ class WalletPanel:
             fg="#6b7280",
             anchor="w",
             font=("Helvetica", 8),
-        ).pack(fill=tk.X, padx=12, pady=(2, 6))
+        ).pack(fill=tk.X, padx=12, pady=(3, 4))
 
         # Initialize holdings displays
         self._update_buy_holdings_display()
@@ -577,7 +577,7 @@ class WalletPanel:
 
         # Total and Balance section - side by side with separate borders
         total_balance_row = tk.Frame(card, bg="#f9fafb")
-        total_balance_row.pack(fill=tk.X, pady=(0, 0))
+        total_balance_row.pack(fill=tk.X, pady=(4, 0))
 
         # Total section
         total_frame = tk.Frame(total_balance_row, bg="#f9fafb")
@@ -1105,14 +1105,14 @@ class WalletPanel:
             amount = float(amount_entry.get())
         except (TypeError, ValueError):
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
-            if hasattr(self, status_var):
+            if hasattr(self, "buy_status_var") if action == "BUY" else hasattr(self, "sell_status_var"):
                 status_var.set("Enter the amount in numeric form")
             # Clear amount field even on error (like wallet action)
             amount_entry.delete(0, tk.END)
             return
         if amount <= 0:
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
-            if hasattr(self, status_var):
+            if hasattr(self, "buy_status_var") if action == "BUY" else hasattr(self, "sell_status_var"):
                 status_var.set("Amount must be greater than 0")
             # Clear amount field even on error (like wallet action)
             amount_entry.delete(0, tk.END)
@@ -1122,7 +1122,7 @@ class WalletPanel:
         asset = self.asset_display_to_code.get(asset_display)
         if not asset:
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
-            if hasattr(self, status_var):
+            if hasattr(self, "buy_status_var") if action == "BUY" else hasattr(self, "sell_status_var"):
                 status_var.set("Please select an asset")
             # Clear amount field even on error (like wallet action)
             amount_entry.delete(0, tk.END)
@@ -1131,7 +1131,7 @@ class WalletPanel:
         price = self.prices.get(asset, 0)
         if price <= 0:
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
-            if hasattr(self, status_var):
+            if hasattr(self, "buy_status_var") if action == "BUY" else hasattr(self, "sell_status_var"):
                 status_var.set("Market price not available yet, try again")
             # Clear amount field even on error (like wallet action)
             amount_entry.delete(0, tk.END)
@@ -1180,13 +1180,27 @@ class WalletPanel:
 
         # Update status message
         status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
-        if hasattr(self, status_var):
+        if hasattr(self, "buy_status_var") if action == "BUY" else hasattr(self, "sell_status_var"):
             status_var.set(
                 f"{action} {amount:.6f} {asset} @ {price:,.2f} (mock)")
 
-        # Call trade callback if available
+        # Call trade callback if available - ensure asset is code, not display name
         if callable(self.on_trade):
-            self.on_trade(action, asset, amount, price, notional)
+            # asset should already be the code from asset_display_to_code.get()
+            # Ensure it's uppercase and valid - same logic as overview.py
+            asset_code = str(asset).strip().upper() if asset else None
+            # Validate asset code is in holdings
+            if asset_code and asset_code in self.holdings:
+                # Call callback with validated asset code (uppercase string)
+                self.on_trade(action, asset_code, amount, price, notional)
+            else:
+                # Fallback: try to get asset code again from display name
+                fallback_asset = self.asset_display_to_code.get(asset_display)
+                if fallback_asset:
+                    fallback_asset = str(fallback_asset).strip().upper()
+                    if fallback_asset and fallback_asset in self.holdings:
+                        self.on_trade(action, fallback_asset,
+                                      amount, price, notional)
 
         # Notify overview of balance/total change after trade
         # (balance already updated via _apply_price_update, but we need to notify here too)

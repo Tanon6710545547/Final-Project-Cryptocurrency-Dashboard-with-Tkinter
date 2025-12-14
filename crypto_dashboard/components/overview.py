@@ -11,6 +11,10 @@ if __package__ is None or __package__ == "":
     parent_dir = os.path.dirname(os.path.dirname(current_dir))
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
+    # Add crypto_dashboard to path
+    crypto_dashboard_dir = os.path.join(parent_dir, "crypto_dashboard")
+    if crypto_dashboard_dir not in sys.path:
+        sys.path.insert(0, crypto_dashboard_dir)
     from config import OVERVIEW_REFRESH_MS, THEME  # type: ignore
     from utils.binance_rest import get_24hr_ticker, get_klines  # type: ignore
 else:
@@ -791,7 +795,7 @@ class OverviewPanel:
         # Buy section (Top) - separated from Sell - made more compact
         buy_section = tk.Frame(card, bg="#f9fafb", padx=0, pady=4,
                                highlightthickness=1, highlightbackground="#e5e7eb")
-        buy_section.pack(fill=tk.X, pady=(0, 4))
+        buy_section.pack(fill=tk.X, pady=(0, 0))
 
         # Buy section title
         tk.Label(
@@ -1134,7 +1138,7 @@ class OverviewPanel:
             self._update_exchange_quote()
             self._update_holdings_display()
             self.on_select(symbol)
-        self.set_active_symbol(symbol)
+            self.set_active_symbol(symbol)
 
     def _update_holdings_display(self):
         """Update holdings display when asset is selected"""
@@ -1251,9 +1255,23 @@ class OverviewPanel:
         self._update_buy_holdings_display()
         self._update_sell_holdings_display()
 
-        # Call trade callback if available
+        # Call trade callback if available - ensure asset is code, not display name
         if callable(self.on_trade):
-            self.on_trade(action, asset, amount, price, notional)
+            # asset should already be the code from asset_display_to_code.get()
+            # Ensure it's uppercase and valid - same logic as wallet.py
+            asset_code = str(asset).strip().upper() if asset else None
+            # Validate asset code is in symbols
+            if asset_code and asset_code in self.symbols:
+                # Call callback with validated asset code (uppercase string)
+                self.on_trade(action, asset_code, amount, price, notional)
+            else:
+                # Fallback: try to get asset code again from display name
+                fallback_asset = self.asset_display_to_code.get(asset_display)
+                if fallback_asset:
+                    fallback_asset = str(fallback_asset).strip().upper()
+                    if fallback_asset and fallback_asset in self.symbols:
+                        self.on_trade(action, fallback_asset,
+                                      amount, price, notional)
 
         # Update Total and Balance
         self._calculate_mock_total()

@@ -736,9 +736,20 @@ class CryptoDashboardApp:
 
     def _record_mock_trade(self, action, asset, amount, price, notional):
         """Record trade from wallet panel and sync to overview"""
-        if hasattr(self, "transactions_panel"):
-            self.transactions_panel.record_user_trade(
-                action, asset, amount, price, notional)
+        # Record the trade in transactions panel
+        # asset should already be a valid uppercase code from wallet.py (e.g., "BTC", "ETH")
+        try:
+            if hasattr(self, "transactions_panel"):
+                if self.transactions_panel:
+                    # Ensure asset is uppercase string (wallet.py already sends uppercase)
+                    asset_code = str(asset).strip(
+                    ).upper() if asset else "UNKNOWN"
+                    self.transactions_panel.record_user_trade(
+                        action, asset_code, amount, price, notional)
+        except Exception as e:
+            print(f"Error in _record_mock_trade: {e}")
+            import traceback
+            traceback.print_exc()
         direction = "Buy" if action == "BUY" else "Sell"
         self.status_var.set(
             f"WALLET • {direction} {amount:.4f} {asset} @ {price:,.2f} (value {notional:,.2f})"
@@ -750,9 +761,20 @@ class CryptoDashboardApp:
 
     def _record_overview_trade(self, action, asset, amount, price, notional):
         """Record trade from overview panel and sync to wallet"""
-        if hasattr(self, "transactions_panel"):
-            self.transactions_panel.record_user_trade(
-                action, asset, amount, price, notional)
+        # Record the trade in transactions panel
+        # asset should already be a valid uppercase code from overview.py (e.g., "BTC", "ETH")
+        try:
+            if hasattr(self, "transactions_panel"):
+                if self.transactions_panel:
+                    # Ensure asset is uppercase string (overview.py already sends uppercase)
+                    asset_code = str(asset).strip(
+                    ).upper() if asset else "UNKNOWN"
+                    self.transactions_panel.record_user_trade(
+                        action, asset_code, amount, price, notional)
+        except Exception as e:
+            print(f"Error in _record_overview_trade: {e}")
+            import traceback
+            traceback.print_exc()
         direction = "Buy" if action == "BUY" else "Sell"
         self.status_var.set(
             f"OVERVIEW • {direction} {amount:.4f} {asset} @ {price:,.2f} (value {notional:,.2f})"

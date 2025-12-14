@@ -13,7 +13,7 @@ if __package__ is None or __package__ == "":
         sys.path.insert(0, parent_dir)
     from config import MAX_TRADES_DISPLAY  # type: ignore
 else:
-    from ..config import MAX_TRADES_DISPLAY
+from ..config import MAX_TRADES_DISPLAY
 
 
 class TradesPanel:

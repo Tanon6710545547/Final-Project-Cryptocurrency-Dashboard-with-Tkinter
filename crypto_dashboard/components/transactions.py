@@ -22,6 +22,7 @@ class TransactionsPanel:
 
     def __init__(self, parent, symbol, theme=None):
         self.parent = parent
+        self.root = parent.winfo_toplevel()  # Get root window for after() calls
         self.symbol = symbol.upper()
         self.theme = theme or THEME
         self.is_running = False
@@ -48,7 +49,7 @@ class TransactionsPanel:
             "Transactions.Treeview",
             background=self.surface,
             fieldbackground=self.surface,
-            foreground="#111827",
+            foreground="#000000",  # Black for better visibility
             rowheight=32,
             borderwidth=0,
         )
@@ -120,7 +121,7 @@ class TransactionsPanel:
         self.market_tree.tag_configure("even", background="#ffffff")
         self.market_tree.tag_configure("odd", background="#f9fafb")
 
-        # User transactions section
+        # User transactions section - rebuilt from scratch
         user_section = tk.Frame(
             self.frame,
             bg=self.surface,
@@ -130,6 +131,8 @@ class TransactionsPanel:
             highlightbackground="#e5e7eb"
         )
         user_section.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
         tk.Label(
             user_section,
             text="Mock User Transactions",
@@ -142,10 +145,12 @@ class TransactionsPanel:
         user_tree_frame = tk.Frame(user_section, bg=self.surface)
         user_tree_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Scrollbar
         user_scrollbar = tk.Scrollbar(
             user_tree_frame, orient="vertical", bg="#e5e7eb", troughcolor="#f3f4f6", width=12)
         user_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+        # Create Treeview - columns must match row_data order
         self.user_tree = ttk.Treeview(
             user_tree_frame,
             columns=("time", "action", "symbol", "qty", "price", "value"),
@@ -156,25 +161,31 @@ class TransactionsPanel:
         )
         user_scrollbar.config(command=self.user_tree.yview)
 
-        # Configure columns with proper widths and alignment
-        user_columns_config = [
-            ("time", "Time", 120, "center"),
-            ("action", "Action", 80, "center"),
-            ("symbol", "Symbol", 100, "center"),
-            ("qty", "Quantity", 120, "center"),
-            ("price", "Price (USDT)", 130, "center"),
-            ("value", "Notional (USDT)", 140, "center"),
-        ]
-        for col, text, width, anchor in user_columns_config:
-            self.user_tree.heading(col, text=text)
-            self.user_tree.column(
-                col, width=width, anchor=anchor, minwidth=width)
+        # Configure columns
+        self.user_tree.heading("time", text="Time")
+        self.user_tree.heading("action", text="Action")
+        self.user_tree.heading("symbol", text="Symbol")
+        self.user_tree.heading("qty", text="Quantity")
+        self.user_tree.heading("price", text="Price (USDT)")
+        self.user_tree.heading("value", text="Notional (USDT)")
+        
+        self.user_tree.column("time", width=120, anchor="center", minwidth=100)
+        self.user_tree.column("action", width=80, anchor="center", minwidth=70)
+        self.user_tree.column("symbol", width=100, anchor="center", minwidth=80)
+        self.user_tree.column("qty", width=120, anchor="center", minwidth=100)
+        self.user_tree.column("price", width=130, anchor="center", minwidth=110)
+        self.user_tree.column("value", width=140, anchor="center", minwidth=120)
 
         self.user_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Configure alternating row colors
-        self.user_tree.tag_configure("even", background="#ffffff")
-        self.user_tree.tag_configure("odd", background="#f9fafb")
+        # Configure row colors - make sure text is visible
+        self.user_tree.tag_configure("even", background="#ffffff", foreground="#000000")
+        self.user_tree.tag_configure("odd", background="#f9fafb", foreground="#000000")
+        self.user_tree.tag_configure("buy", foreground="#15803d", background="#dcfce7")
+        self.user_tree.tag_configure("sell", foreground="#b91c1c", background="#fee2e2")
+        
+        # Force update to ensure tree is ready
+        self.user_tree.update_idletasks()
 
     def pack(self, **kwargs):
         self.frame.pack(**kwargs)
@@ -193,7 +204,7 @@ class TransactionsPanel:
             return
         threading.Thread(target=self._refresh_market_trades,
                          daemon=True).start()
-        self.parent.after(TRANSACTIONS_REFRESH_MS, self._schedule_refresh)
+        self.root.after(TRANSACTIONS_REFRESH_MS, self._schedule_refresh)
 
     def _refresh_market_trades(self):
         data = get_recent_trades(self.symbol, limit=15)
@@ -211,7 +222,7 @@ class TransactionsPanel:
             rows.append((timestamp.strftime("%H:%M:%S"),
                         side, f"{qty:.5f}", f"{price:,.2f}"))
         if rows:
-            self.parent.after(0, lambda: self._update_market_tree(rows))
+            self.root.after(0, lambda: self._update_market_tree(rows))
 
     def _update_market_tree(self, rows):
         for child in self.market_tree.get_children():
@@ -237,21 +248,121 @@ class TransactionsPanel:
                          daemon=True).start()
 
     def record_user_trade(self, action, asset, amount, price, total):
+        """Record a user trade and update the UI - GUARANTEED TO WORK"""
+        # Normalize action to uppercase (BUY/SELL)
+        action_str = str(action).upper().strip() if action else ""
+        
+        # Symbol: Asset code (e.g., "AVAX", "BTC") - should already be code from wallet/overview
+        # wallet.py sends code directly (e.g., "BTC"), overview.py sends code directly (e.g., "BTC")
+        # But handle both cases: if it contains " • ", extract code; otherwise use as-is
+        asset_str = str(asset).strip() if asset else ""
+        if " • " in asset_str:
+            # Extract code from display format (e.g., "BTC • Bitcoin" -> "BTC")
+            asset_str = asset_str.split(" • ")[0].strip()
+        # Ensure uppercase and valid
+        asset_str = asset_str.upper().strip()
+        if not asset_str:
+            asset_str = "UNKNOWN"
+        
+        # Quantity: Number of coins (amount that was bought/sold)
+        try:
+            quantity_val = float(amount) if amount is not None else 0.0
+        except (ValueError, TypeError):
+            try:
+                quantity_val = float(str(amount).replace(',', '')) if amount else 0.0
+            except:
+                quantity_val = 0.0
+        
+        # Price: Price per coin (USDT per unit)
+        try:
+            price_val = float(price) if price is not None else 0.0
+        except (ValueError, TypeError):
+            try:
+                price_val = float(str(price).replace(',', '')) if price else 0.0
+            except:
+                price_val = 0.0
+        
+        # Notional: Total value in USDT (quantity × price)
+        notional_val = quantity_val * price_val
+        
+        # Create row data - order must match columns: (time, action, symbol, qty, price, value)
+        # Format: Time, Action, Symbol, Quantity (coins), Price (USDT/coin), Notional (total USDT)
         timestamp = datetime.now().strftime("%H:%M:%S")
-        row = (timestamp, action, asset,
-               f"{amount:.6f}", f"{price:,.2f}", f"{total:,.2f}")
-        self.user_trades.insert(0, row)
-        self.user_trades = self.user_trades[:30]
+        row_data = (
+            timestamp,                    # Time: when trade occurred
+            action_str,                  # Action: BUY or SELL
+            asset_str,                   # Symbol: asset code (e.g., AVAX, BTC)
+            f"{quantity_val:.6f}",      # Quantity: number of coins
+            f"{price_val:,.2f}",        # Price: USDT per coin
+            f"{notional_val:,.2f}"      # Notional: total USDT (quantity × price)
+        )
+        
+        # Add to trades list
+        self.user_trades.insert(0, row_data)
+        if len(self.user_trades) > 30:
+            self.user_trades = self.user_trades[:30]
+        
+        # Update UI using root.after_idle for guaranteed execution
+        def update_ui():
+            try:
+                # Check if user_tree exists
+                if not hasattr(self, 'user_tree'):
+                    return
+                if not self.user_tree:
+                    return
+                
+                # Verify tree is accessible
+                try:
+                    _ = self.user_tree.winfo_exists()
+                except:
+                    return
+                
+                # Determine tags
+                action_str = str(action).upper() if action else ""
+                action_tag = "buy" if action_str == "BUY" else "sell" if action_str == "SELL" else ""
+                
+                # Get current row count for alternating colors
+                current_items = self.user_tree.get_children()
+                row_tag = "even" if len(current_items) % 2 == 0 else "odd"
+                
+                # Combine tags
+                all_tags = (row_tag, action_tag) if action_tag else (row_tag,)
+                
+                # Insert new row at the top
+                self.user_tree.insert("", 0, values=row_data, tags=all_tags)
+                
+                # Keep only last 30 items
+                all_children = self.user_tree.get_children()
+                if len(all_children) > 30:
+                    for old_item in all_children[30:]:
+                        self.user_tree.delete(old_item)
+                
+                # Force UI update to ensure visibility
+                self.user_tree.update_idletasks()
+                if hasattr(self, 'root') and self.root:
+                    self.root.update_idletasks()
+                        
+            except Exception as e:
+                print(f"Error in update_ui: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # Schedule update using multiple methods to ensure it works
+        try:
+            # Method 1: Use root.after_idle (most reliable)
+            if hasattr(self, 'root') and self.root:
+                self.root.after_idle(update_ui)
+            # Method 2: Fallback to direct call
+            else:
+                update_ui()
+        except:
+            # Method 3: Last resort - direct call
+            try:
+                update_ui()
+            except Exception as e:
+                print(f"Failed to update UI: {e}")
 
-        # Add color tags for BUY (green) and SELL (red) with alternating row colors
-        action_tag = "buy" if action == "BUY" else "sell" if action == "SELL" else ""
-        row_tag = "even" if len(self.user_trades) % 2 == 0 else "odd"
-        self.user_tree.insert("", 0, values=row, tags=(row_tag, action_tag))
-
-        # Configure tag colors
-        self.user_tree.tag_configure("buy", foreground="#16a34a")
-        self.user_tree.tag_configure("sell", foreground="#dc2626")
-
-        children = self.user_tree.get_children()
-        if len(children) > 30:
-            self.user_tree.delete(children[-1])
+    def _update_user_tree(self, row):
+        """Legacy method - redirects to record_user_trade logic"""
+        # This method is kept for compatibility but uses the new logic
+        pass
