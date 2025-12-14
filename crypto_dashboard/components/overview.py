@@ -29,14 +29,17 @@ FAVORITE_COLORS = [
 # Default favorites
 DEFAULT_FAVORITES = ["BTC", "ETH", "LTC", "ADA"]
 
+
 def get_favorites_file_path():
     """Get the path to the favorites config file"""
     if __package__ is None or __package__ == "":
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(os.path.dirname(current_dir))
     else:
-        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        parent_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(parent_dir, "favorites.json")
+
 
 def load_favorites():
     """Load favorites from file, return default if file doesn't exist"""
@@ -50,6 +53,7 @@ def load_favorites():
             return DEFAULT_FAVORITES
     return DEFAULT_FAVORITES
 
+
 def save_favorites(favorites):
     """Save favorites to file"""
     file_path = get_favorites_file_path()
@@ -60,12 +64,14 @@ def save_favorites(favorites):
     except Exception:
         return False
 
+
 SPARKLINE_STYLES = {
     "BTC": {"line": "#4f46e5", "fill": "#c7d2fe", "border": "#4f46e5"},
     "ETH": {"line": "#0ea5e9", "fill": "#bae6fd", "border": "#0ea5e9"},
     "SOL": {"line": "#8b5cf6", "fill": "#ddd6fe", "border": "#8b5cf6"},
     "ADA": {"line": "#22c55e", "fill": "#d1fae5", "border": "#22c55e"},
 }
+
 
 class OverviewPanel:
     """AquaNeko inspired overview with favorites, live market, and exchange card"""
@@ -93,15 +99,22 @@ class OverviewPanel:
         self.exchange_asset_var = tk.StringVar(value=self.chart_symbol)
         self.exchange_amount_var = tk.StringVar(value="1.0")
         self.exchange_quote_var = tk.StringVar(value="$ -- USD")
-        
+        # Mock balance for overview (similar to wallet)
+        self.mock_balance = 2500.0
+        self.mock_total = 0.0
+        # Mock holdings for buy/sell functionality
+        self.mock_holdings = {symbol: 0.0 for symbol in self.symbols.keys()}
+
         # Load user favorites
         self.user_favorites = load_favorites()
         # Filter to only include symbols that exist
-        self.user_favorites = [f for f in self.user_favorites if f in self.symbols]
+        self.user_favorites = [
+            f for f in self.user_favorites if f in self.symbols]
         # If no valid favorites, use defaults
         if not self.user_favorites:
-            self.user_favorites = [f for f in DEFAULT_FAVORITES if f in self.symbols]
-        
+            self.user_favorites = [
+                f for f in DEFAULT_FAVORITES if f in self.symbols]
+
         self.frame = tk.Frame(parent, bg=self.bg, padx=28, pady=16)
         self.frame.pack(fill=tk.BOTH, expand=True)
         tk.Label(
@@ -114,37 +127,47 @@ class OverviewPanel:
         self._build_main_layout()
         self.set_active_symbol(self.chart_symbol)
         self._trigger_chart_refresh()
+        # Initialize holdings display
+        if hasattr(self, "holdings_display_var"):
+            self._update_holdings_display()
 
     def _build_main_layout(self):
         grid = tk.Frame(self.frame, bg=self.bg)
         grid.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
         grid.columnconfigure(0, weight=1, uniform="col")
         grid.columnconfigure(1, weight=1, uniform="col")
-        grid.rowconfigure(0, weight=1, minsize=300)  # Top row for favorites and chart
-        grid.rowconfigure(1, weight=3, minsize=400)  # Bottom row for live market and exchange
+        # Top row for favorites and chart
+        grid.rowconfigure(0, weight=1, minsize=300)
+        # Bottom row for live market and exchange
+        grid.rowconfigure(1, weight=3, minsize=400)
 
         favorites_holder = tk.Frame(grid, bg=self.bg)
-        favorites_holder.grid(row=0, column=0, padx=(0, 12), pady=(0, 12), sticky="nsew")
+        favorites_holder.grid(row=0, column=0, padx=(
+            0, 12), pady=(0, 12), sticky="nsew")
         self._build_favorites(favorites_holder)
 
         chart_holder = tk.Frame(grid, bg=self.bg)
-        chart_holder.grid(row=0, column=1, padx=(12, 0), pady=(0, 12), sticky="nsew")
+        chart_holder.grid(row=0, column=1, padx=(
+            12, 0), pady=(0, 12), sticky="nsew")
         self._build_chart_preview(chart_holder)
 
         live_holder = tk.Frame(grid, bg=self.bg)
-        live_holder.grid(row=1, column=0, padx=(0, 12), pady=(0, 0), sticky="nsew")
+        live_holder.grid(row=1, column=0, padx=(
+            0, 12), pady=(0, 0), sticky="nsew")
         self._build_live_market(live_holder)
 
         exchange_holder = tk.Frame(grid, bg=self.bg)
-        exchange_holder.grid(row=1, column=1, padx=(12, 0), pady=(0, 0), sticky="nsew")
+        exchange_holder.grid(row=1, column=1, padx=(
+            12, 0), pady=(0, 0), sticky="nsew")
         self._build_exchange_card(exchange_holder)
 
     def _build_favorites(self, parent):
         # Header with title and edit button
         header = tk.Frame(parent, bg=self.bg)
         header.pack(fill=tk.X, pady=(0, 10))
-        tk.Label(header, text="Favorites", font=("Helvetica", 16, "bold"), bg=self.bg, fg="#111827").pack(side=tk.LEFT)
-        
+        tk.Label(header, text="Favorites", font=("Helvetica", 16,
+                 "bold"), bg=self.bg, fg="#111827").pack(side=tk.LEFT)
+
         # Edit button with modern styling
         edit_btn = tk.Button(
             header,
@@ -164,55 +187,66 @@ class OverviewPanel:
         )
         edit_btn.pack(side=tk.RIGHT)
         # Add hover effect
+
         def on_enter(e):
             edit_btn.config(bg="#e5e7eb")
+
         def on_leave(e):
             edit_btn.config(bg="#f3f4f6")
         edit_btn.bind("<Enter>", on_enter)
         edit_btn.bind("<Leave>", on_leave)
-        
+
         # Grid for favorite cards
         self.favorites_grid = tk.Frame(parent, bg=self.bg)
         self.favorites_grid.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
         self.favorites_grid.columnconfigure((0, 1), weight=1)
-        
+
         self._refresh_favorites_display()
-    
+
     def _refresh_favorites_display(self):
         """Refresh the favorites display with current user favorites"""
         # Clear existing cards
         for widget in self.favorites_grid.winfo_children():
             widget.destroy()
         self.favorite_cards.clear()
-        
+
         # Create cards for current favorites
         row_index = 0
         col_index = 0
         for idx, symbol in enumerate(self.user_favorites):
             if symbol not in self.symbols:
                 continue
-            
+
             # Get color palette (cycle through available colors)
             palette = FAVORITE_COLORS[idx % len(FAVORITE_COLORS)]
-            
-            card = tk.Frame(self.favorites_grid, bg=self.surface, bd=0, relief="flat", padx=2, pady=2)
-            card.grid(row=row_index, column=col_index, sticky="nsew", padx=8, pady=8)
+
+            card = tk.Frame(self.favorites_grid, bg=self.surface,
+                            bd=0, relief="flat", padx=2, pady=2)
+            card.grid(row=row_index, column=col_index,
+                      sticky="nsew", padx=8, pady=8)
             # Start with a neutral gray background, will be updated dynamically
             inner = tk.Frame(card, bg="#e5e7eb", padx=18, pady=16)
             inner.pack(fill=tk.BOTH, expand=True)
-            inner.bind("<Button-1>", lambda _e, s=symbol: self._handle_symbol_select(s))
+            inner.bind("<Button-1>", lambda _e,
+                       s=symbol: self._handle_symbol_select(s))
 
-            price_label = tk.Label(inner, text="$ --", font=("Helvetica", 24, "bold"), bg="#e5e7eb", fg="#111827")
+            price_label = tk.Label(
+                inner, text="$ --", font=("Helvetica", 24, "bold"), bg="#e5e7eb", fg="#111827")
             price_label.pack(anchor="w", pady=(30, 0))
-            price_label.bind("<Button-1>", lambda _e, s=symbol: self._handle_symbol_select(s))
-            
-            subtitle = tk.Label(inner, text=f"{symbol} / USDT", font=("Helvetica", 12), bg="#e5e7eb", fg="#111827")
+            price_label.bind("<Button-1>", lambda _e,
+                             s=symbol: self._handle_symbol_select(s))
+
+            subtitle = tk.Label(
+                inner, text=f"{symbol} / USDT", font=("Helvetica", 12), bg="#e5e7eb", fg="#111827")
             subtitle.pack(anchor="w")
-            subtitle.bind("<Button-1>", lambda _e, s=symbol: self._handle_symbol_select(s))
-            
-            change_label = tk.Label(inner, text="--", font=("Helvetica", 11, "bold"), bg="#e5e7eb", fg="#6b7280")
+            subtitle.bind("<Button-1>", lambda _e,
+                          s=symbol: self._handle_symbol_select(s))
+
+            change_label = tk.Label(
+                inner, text="--", font=("Helvetica", 11, "bold"), bg="#e5e7eb", fg="#6b7280")
             change_label.pack(anchor="ne")
-            change_label.bind("<Button-1>", lambda _e, s=symbol: self._handle_symbol_select(s))
+            change_label.bind("<Button-1>", lambda _e,
+                              s=symbol: self._handle_symbol_select(s))
 
             self.favorite_cards[symbol] = {
                 "frame": card,
@@ -225,7 +259,7 @@ class OverviewPanel:
             col_index = (col_index + 1) % 2
             if col_index == 0:
                 row_index += 1
-    
+
     def _open_favorites_editor(self):
         """Open dialog to edit favorites"""
         dialog = tk.Toplevel(self.frame)
@@ -235,21 +269,21 @@ class OverviewPanel:
         dialog.transient(self.parent)
         dialog.grab_set()
         dialog.resizable(False, False)
-        
+
         # Center the dialog
         dialog.update_idletasks()
         x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
         y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
         dialog.geometry(f"+{x}+{y}")
-        
+
         # Main container with consistent padding
         main_container = tk.Frame(dialog, bg=self.bg, padx=28, pady=28)
         main_container.pack(fill=tk.BOTH, expand=True)
-        
+
         # Header section
         header_frame = tk.Frame(main_container, bg=self.bg)
         header_frame.pack(fill=tk.X, pady=(0, 20))
-        
+
         tk.Label(
             header_frame,
             text="Edit Favorites",
@@ -257,7 +291,7 @@ class OverviewPanel:
             bg=self.bg,
             fg="#0f172a"
         ).pack(anchor="w")
-        
+
         tk.Label(
             header_frame,
             text="Select up to 4 favorites",
@@ -265,17 +299,17 @@ class OverviewPanel:
             bg=self.bg,
             fg="#6b7280"
         ).pack(anchor="w", pady=(6, 0))
-        
+
         # Available symbols section with card style matching the app
-        list_card = tk.Frame(main_container, bg=self.surface, padx=20, pady=18, 
-                            highlightthickness=1, highlightbackground="#e5e7eb",
-                            relief="flat")
+        list_card = tk.Frame(main_container, bg=self.surface, padx=20, pady=18,
+                             highlightthickness=1, highlightbackground="#e5e7eb",
+                             relief="flat")
         list_card.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
-        
+
         # Section header
         section_header = tk.Frame(list_card, bg=self.surface)
         section_header.pack(fill=tk.X, pady=(0, 12))
-        
+
         tk.Label(
             section_header,
             text="Available Cryptocurrencies",
@@ -283,7 +317,7 @@ class OverviewPanel:
             bg=self.surface,
             fg="#111827"
         ).pack(side=tk.LEFT)
-        
+
         # Selection counter in header
         info_label = tk.Label(
             section_header,
@@ -293,15 +327,15 @@ class OverviewPanel:
             fg="#6b7280"
         )
         info_label.pack(side=tk.RIGHT)
-        
+
         # Scrollable listbox frame
         listbox_frame = tk.Frame(list_card, bg=self.surface)
         listbox_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         scrollbar = tk.Scrollbar(listbox_frame, orient="vertical", bg="#e5e7eb",
                                  troughcolor="#f3f4f6", width=12)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
+
         available_listbox = tk.Listbox(
             listbox_frame,
             selectmode=tk.MULTIPLE,
@@ -319,14 +353,14 @@ class OverviewPanel:
         )
         available_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=available_listbox.yview)
-        
+
         # Populate with all available symbols
         all_symbols = sorted(self.symbols.keys())
         for idx, symbol in enumerate(all_symbols):
             available_listbox.insert(tk.END, f"  {symbol} / USDT")
             if symbol in self.user_favorites:
                 available_listbox.selection_set(idx)
-        
+
         def update_selection_info():
             count = len(available_listbox.curselection())
             info_label.config(text=f"{count} / 4 selected")
@@ -335,16 +369,16 @@ class OverviewPanel:
                 info_label.config(fg="#dc2626")
             else:
                 info_label.config(fg="#6b7280")
-        
+
         # Track previous selection to detect additions
         previous_selection = set(available_listbox.curselection())
-        
+
         def limit_selection(event):
             """Prevent selecting more than 4 items"""
             nonlocal previous_selection
             current_selection = set(available_listbox.curselection())
             current_count = len(current_selection)
-            
+
             # If we have more than 4, we need to fix it
             if current_count > 4:
                 # Check if this is a new selection (count increased) or just a change
@@ -354,7 +388,8 @@ class OverviewPanel:
                     available_listbox.selection_clear(0, tk.END)
                     for idx in previous_selection:
                         available_listbox.selection_set(idx)
-                    info_label.config(text="4 / 4 selected (maximum reached)", fg="#dc2626")
+                    info_label.config(
+                        text="4 / 4 selected (maximum reached)", fg="#dc2626")
                     dialog.after(100, update_selection_info)
                 else:
                     # Count is same or less, but somehow > 4 - shouldn't happen, but fix it
@@ -369,31 +404,34 @@ class OverviewPanel:
                 # Valid selection (4 or fewer) - allow it
                 previous_selection = current_selection
                 update_selection_info()
-        
+
         available_listbox.bind("<<ListboxSelect>>", limit_selection)
-        
+
         # Buttons section with consistent styling
         btn_frame = tk.Frame(main_container, bg=self.bg)
         btn_frame.pack(fill=tk.X)
-        
+
         def apply_favorites():
-            selected = [all_symbols[i] for i in available_listbox.curselection()]
+            selected = [all_symbols[i]
+                        for i in available_listbox.curselection()]
             if len(selected) > 4:
-                messagebox.showwarning("Too Many Favorites", "Please select up to 4 favorites.")
+                messagebox.showwarning(
+                    "Too Many Favorites", "Please select up to 4 favorites.")
                 return
             if len(selected) == 0:
-                messagebox.showwarning("No Selection", "Please select at least one favorite.")
+                messagebox.showwarning(
+                    "No Selection", "Please select at least one favorite.")
                 return
-            
+
             self.user_favorites = selected
             save_favorites(selected)
             self._refresh_favorites_display()
             dialog.destroy()
-        
+
         # Button container for proper spacing
         button_container = tk.Frame(btn_frame, bg=self.bg)
         button_container.pack(side=tk.RIGHT)
-        
+
         # Cancel button - same font size as Save Changes
         cancel_btn = tk.Button(
             button_container,
@@ -412,14 +450,15 @@ class OverviewPanel:
             highlightthickness=0
         )
         cancel_btn.pack(side=tk.LEFT, padx=(0, 10))
-        
+
         def on_cancel_enter(e):
             cancel_btn.config(bg="#e5e7eb")
+
         def on_cancel_leave(e):
             cancel_btn.config(bg="#f3f4f6")
         cancel_btn.bind("<Enter>", on_cancel_enter)
         cancel_btn.bind("<Leave>", on_cancel_leave)
-        
+
         # Save button with light background and dark text for better readability
         save_btn = tk.Button(
             button_container,
@@ -440,9 +479,10 @@ class OverviewPanel:
             highlightcolor="#f3f4f6"
         )
         save_btn.pack(side=tk.LEFT)
-        
+
         def on_save_enter(e):
             save_btn.config(bg="#e5e7eb", fg="#111827")
+
         def on_save_leave(e):
             save_btn.config(bg="#f3f4f6", fg="#111827")
         save_btn.bind("<Enter>", on_save_enter)
@@ -450,8 +490,10 @@ class OverviewPanel:
 
     def _build_chart_preview(self, parent):
         # Add a label to match the "Favorites" label spacing
-        tk.Label(parent, text="Chart Preview", font=("Helvetica", 16, "bold"), bg=self.bg, fg="#111827").pack(anchor="w")
-        holder = tk.Frame(parent, bg=self.surface, padx=18, pady=16, highlightthickness=2, highlightbackground="#93c5fd")
+        tk.Label(parent, text="Chart Preview", font=("Helvetica", 16,
+                 "bold"), bg=self.bg, fg="#111827").pack(anchor="w")
+        holder = tk.Frame(parent, bg=self.surface, padx=18, pady=16,
+                          highlightthickness=2, highlightbackground="#93c5fd")
         holder.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
         self.chart_price_var = tk.StringVar(value="$ --")
         self.chart_change_var = tk.StringVar(value="--")
@@ -460,8 +502,10 @@ class OverviewPanel:
         header.pack(fill=tk.X)
         left_labels = tk.Frame(header, bg=self.surface)
         left_labels.pack(side=tk.LEFT)
-        tk.Label(left_labels, textvariable=self.chart_price_var, font=("Helvetica", 20, "bold"), bg=self.surface, fg="#111827").pack(anchor="w")
-        tk.Label(left_labels, textvariable=self.chart_change_var, font=("Helvetica", 12), bg=self.surface, fg="#047857").pack(anchor="w")
+        tk.Label(left_labels, textvariable=self.chart_price_var, font=(
+            "Helvetica", 20, "bold"), bg=self.surface, fg="#111827").pack(anchor="w")
+        tk.Label(left_labels, textvariable=self.chart_change_var, font=(
+            "Helvetica", 12), bg=self.surface, fg="#047857").pack(anchor="w")
         selector = tk.Frame(header, bg=self.surface)
         selector.pack(side=tk.RIGHT)
         asset_combo = ttk.Combobox(
@@ -472,46 +516,52 @@ class OverviewPanel:
             width=10,
         )
         asset_combo.pack(side=tk.TOP, anchor="e")
-        asset_combo.bind("<<ComboboxSelected>>", lambda _e: self._on_chart_selector_change())
-        tk.Label(selector, textvariable=self.chart_title_var, font=("Helvetica", 12, "bold"), bg=self.surface, fg="#111827").pack(side=tk.TOP, anchor="e")
-        self.chart_canvas = tk.Canvas(holder, height=240, bg="#f3f4f6", highlightthickness=0)
+        asset_combo.bind("<<ComboboxSelected>>",
+                         lambda _e: self._on_chart_selector_change())
+        tk.Label(selector, textvariable=self.chart_title_var, font=(
+            "Helvetica", 12, "bold"), bg=self.surface, fg="#111827").pack(side=tk.TOP, anchor="e")
+        self.chart_canvas = tk.Canvas(
+            holder, height=240, bg="#f3f4f6", highlightthickness=0)
         self.chart_canvas.pack(fill=tk.BOTH, expand=True, pady=(6, 0))
 
     def _build_live_market(self, parent):
         card = tk.Frame(parent, bg=self.surface, padx=18, pady=10)
         card.pack(fill=tk.BOTH, expand=True)
-        tk.Label(card, text="Live Market", font=("Helvetica", 16, "bold"), bg=self.surface, fg="#111827").pack(anchor="w", pady=(0, 6))
-        
+        tk.Label(card, text="Live Market", font=("Helvetica", 16, "bold"),
+                 bg=self.surface, fg="#111827").pack(anchor="w", pady=(0, 6))
+
         # Create scrollable frame for market rows
         # Calculate height for exactly 5 rows: each row ~74px (50px canvas + 20px padding + 4px margin)
         row_height = 74  # Approximate height per row
         max_visible_rows = 5
         scrollable_height = row_height * max_visible_rows
-        
+
         # Create canvas and scrollbar - make it expand to fill available space
         canvas_frame = tk.Frame(card, bg=self.surface)
         canvas_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         scrollbar = tk.Scrollbar(canvas_frame, orient="vertical")
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        market_canvas = tk.Canvas(canvas_frame, bg=self.surface, highlightthickness=0, yscrollcommand=scrollbar.set)
+
+        market_canvas = tk.Canvas(
+            canvas_frame, bg=self.surface, highlightthickness=0, yscrollcommand=scrollbar.set)
         market_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
+
         # Update canvas height dynamically when frame is resized
         def update_canvas_height(event=None):
             if event and event.widget == canvas_frame:
                 frame_height = event.height
                 if frame_height > 1:
                     market_canvas.configure(height=frame_height)
-        
+
         canvas_frame.bind("<Configure>", update_canvas_height)
         scrollbar.config(command=market_canvas.yview)
-        
+
         # Create frame inside canvas for rows
         rows_container = tk.Frame(market_canvas, bg=self.surface)
-        canvas_window = market_canvas.create_window((0, 0), window=rows_container, anchor="nw")
-        
+        canvas_window = market_canvas.create_window(
+            (0, 0), window=rows_container, anchor="nw")
+
         # Configure canvas scrolling
         def configure_scroll_region(event=None):
             market_canvas.configure(scrollregion=market_canvas.bbox("all"))
@@ -519,7 +569,7 @@ class OverviewPanel:
             canvas_width = market_canvas.winfo_width()
             if canvas_width > 1:
                 market_canvas.itemconfig(canvas_window, width=canvas_width)
-            
+
             # Update scrollbar visibility based on content
             rows_container.update_idletasks()
             bbox = market_canvas.bbox("all")
@@ -530,37 +580,37 @@ class OverviewPanel:
                 else:
                     if not scrollbar.winfo_ismapped():
                         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
+
         def on_canvas_configure(event):
             canvas_width = event.width
             market_canvas.itemconfig(canvas_window, width=canvas_width)
             configure_scroll_region()
-        
+
         rows_container.bind("<Configure>", configure_scroll_region)
         market_canvas.bind("<Configure>", on_canvas_configure)
-        
+
         # Track if mouse is over market section
         market_mouse_inside = [False]
-        
+
         def on_enter(event):
             market_mouse_inside[0] = True
-        
+
         def on_leave(event):
             market_mouse_inside[0] = False
-        
+
         # Enable mousewheel scrolling and prevent event propagation
         # Use bind_all with add="+" to run BEFORE main window's handler
         def on_mousewheel_global(event):
             # Check if mouse is over market section
             if not market_mouse_inside[0]:
                 return None
-            
+
             try:
                 widget = event.widget
                 # Double-check widget hierarchy
                 current = widget
                 is_in_market = False
-                
+
                 while current:
                     if current == market_canvas or current == rows_container or current == canvas_frame:
                         is_in_market = True
@@ -569,11 +619,12 @@ class OverviewPanel:
                         current = current.master
                     except:
                         break
-                
+
                 if is_in_market:
                     if hasattr(event, 'delta') and event.delta:
                         # Windows/Mac
-                        market_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+                        market_canvas.yview_scroll(
+                            int(-1 * (event.delta / 120)), "units")
                     elif hasattr(event, 'num'):
                         if event.num == 4:
                             # Linux scroll up
@@ -585,7 +636,7 @@ class OverviewPanel:
             except Exception:
                 pass
             return None
-        
+
         # Bind enter/leave events to track mouse position
         canvas_frame.bind("<Enter>", on_enter)
         canvas_frame.bind("<Leave>", on_leave)
@@ -593,7 +644,7 @@ class OverviewPanel:
         market_canvas.bind("<Leave>", on_leave)
         rows_container.bind("<Enter>", on_enter)
         rows_container.bind("<Leave>", on_leave)
-        
+
         # Bind directly to widgets WITHOUT add="+" to give our handlers priority
         # This ensures our handler runs first and can return "break" to stop propagation
         def bind_mousewheel(widget):
@@ -602,30 +653,36 @@ class OverviewPanel:
             widget.bind("<MouseWheel>", on_mousewheel_global)
             widget.bind("<Button-4>", on_mousewheel_global)
             widget.bind("<Button-5>", on_mousewheel_global)
-        
+
         bind_mousewheel(market_canvas)
         bind_mousewheel(rows_container)
         bind_mousewheel(canvas_frame)
         bind_mousewheel(card)  # Also bind to the card itself
-        
+
         # Store canvas reference for cleanup
         self.market_canvas = market_canvas
-        
+
         # Create rows for each symbol
         for idx, symbol in enumerate(sorted(self.symbols.keys())):
-            row = tk.Frame(rows_container, bg=self.surface, pady=10, cursor="hand2")
+            row = tk.Frame(rows_container, bg=self.surface,
+                           pady=10, cursor="hand2")
             row.pack(fill=tk.X, pady=2)
             row.columnconfigure(2, weight=1)
-            row.bind("<Button-1>", lambda _e, s=symbol: self._handle_symbol_select(s))
-            title = tk.Label(row, text=f"{symbol} / USDT", font=("Helvetica", 12, "bold"), bg=self.surface, fg="#111827")
+            row.bind("<Button-1>", lambda _e,
+                     s=symbol: self._handle_symbol_select(s))
+            title = tk.Label(row, text=f"{symbol} / USDT", font=(
+                "Helvetica", 12, "bold"), bg=self.surface, fg="#111827")
             title.grid(row=0, column=0, sticky="w")
-            change = tk.Label(row, text="--", font=("Helvetica", 12, "bold"), bg=self.surface, fg="#16a34a")
+            change = tk.Label(row, text="--", font=("Helvetica",
+                              12, "bold"), bg=self.surface, fg="#16a34a")
             change.grid(row=0, column=1, padx=20, sticky="w")
-            price = tk.Label(row, text="--", font=("Helvetica", 12, "bold"), bg=self.surface, fg="#111827")
+            price = tk.Label(row, text="--", font=("Helvetica",
+                             12, "bold"), bg=self.surface, fg="#111827")
             price.grid(row=0, column=2, sticky="w")
-            canvas = tk.Canvas(row, width=180, height=50, bg=self.surface, highlightthickness=0)
+            canvas = tk.Canvas(row, width=180, height=50,
+                               bg=self.surface, highlightthickness=0)
             canvas.grid(row=0, column=3, padx=(10, 0), sticky="e")
-            
+
             # Bind mousewheel and enter/leave to row and all its children
             bind_mousewheel(row)
             bind_mousewheel(title)
@@ -634,64 +691,288 @@ class OverviewPanel:
             bind_mousewheel(canvas)
             row.bind("<Enter>", on_enter)
             row.bind("<Leave>", on_leave)
-            
-            self.market_rows[symbol] = {"frame": row, "change": change, "price": price}
+
+            self.market_rows[symbol] = {
+                "frame": row, "change": change, "price": price}
             self.spark_canvases[symbol] = canvas
 
     def _build_exchange_card(self, parent):
-        card = tk.Frame(parent, bg=self.surface, padx=18, pady=10, highlightthickness=1, highlightbackground="#e5e7eb")
+        card = tk.Frame(parent, bg=self.surface, padx=18, pady=10,
+                        highlightthickness=1, highlightbackground="#e5e7eb")
         card.pack(fill=tk.BOTH, expand=True)
-        
+
         # Exchange title
-        tk.Label(card, text="Exchange", font=("Helvetica", 16, "bold"), bg=self.surface, fg="#111827").pack(anchor="w", pady=(0, 12))
-        
+        tk.Label(card, text="Exchange", font=("Helvetica", 16, "bold"),
+                 bg=self.surface, fg="#111827").pack(anchor="w", pady=(0, 12))
+
         # Conversion display section with better layout
         conversion_frame = tk.Frame(card, bg=self.surface)
         conversion_frame.pack(fill=tk.X, pady=(0, 12))
-        
+
         # Left side: description text
         desc_frame = tk.Frame(conversion_frame, bg=self.surface)
         desc_frame.pack(side=tk.LEFT, fill=tk.Y)
-        tk.Label(desc_frame, text="1 unit converts to", font=("Helvetica", 11), bg=self.surface, fg="#6b7280").pack(anchor="w")
-        
+        tk.Label(desc_frame, text="1 unit converts to", font=(
+            "Helvetica", 11), bg=self.surface, fg="#6b7280").pack(anchor="w")
+
         # Right side: conversion value
         quote_frame = tk.Frame(conversion_frame, bg=self.surface)
         quote_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        tk.Label(quote_frame, textvariable=self.exchange_quote_var, font=("Helvetica", 18, "bold"), bg=self.surface, fg="#111827").pack(anchor="e")
+        tk.Label(quote_frame, textvariable=self.exchange_quote_var, font=(
+            "Helvetica", 18, "bold"), bg=self.surface, fg="#111827").pack(anchor="e")
 
         # Input section with improved styling
-        entry_frame = tk.Frame(card, bg="#f9fafb", highlightthickness=1, highlightbackground="#e5e7eb", padx=14, pady=12)
+        entry_frame = tk.Frame(card, bg="#f9fafb", highlightthickness=1,
+                               highlightbackground="#e5e7eb", padx=14, pady=12)
         entry_frame.pack(fill=tk.X, pady=(0, 16))
-        
+
         # Amount input
         amount_frame = tk.Frame(entry_frame, bg="#f9fafb")
         amount_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        tk.Label(amount_frame, text="Amount", font=("Helvetica", 10, "bold"), bg="#f9fafb", fg="#6b7280").pack(anchor="w", pady=(0, 4))
-        amount_entry = tk.Entry(amount_frame, textvariable=self.exchange_amount_var, bd=0, font=("Helvetica", 16, "bold"), 
+        tk.Label(amount_frame, text="Amount", font=("Helvetica", 10, "bold"),
+                 bg="#f9fafb", fg="#6b7280").pack(anchor="w", pady=(0, 4))
+        amount_entry = tk.Entry(amount_frame, textvariable=self.exchange_amount_var, bd=0, font=("Helvetica", 16, "bold"),
                                 bg="#ffffff", fg="#111827", relief="flat", highlightthickness=1, highlightbackground="#d1d5db",
                                 highlightcolor="#3b82f6", insertbackground="#111827", justify="left")
         amount_entry.pack(fill=tk.X, ipady=8)
-        
+
         # Asset selector
         asset_frame = tk.Frame(entry_frame, bg="#f9fafb")
         asset_frame.pack(side=tk.RIGHT, padx=(12, 0))
-        tk.Label(asset_frame, text="Asset", font=("Helvetica", 10, "bold"), bg="#f9fafb", fg="#6b7280").pack(anchor="w", pady=(0, 4))
-        asset_combo = ttk.Combobox(asset_frame, values=list(self.symbols.keys()), textvariable=self.exchange_asset_var, 
+        tk.Label(asset_frame, text="Asset", font=("Helvetica", 10, "bold"),
+                 bg="#f9fafb", fg="#6b7280").pack(anchor="w", pady=(0, 4))
+        asset_combo = ttk.Combobox(asset_frame, values=list(self.symbols.keys()), textvariable=self.exchange_asset_var,
                                    state="readonly", width=10, font=("Helvetica", 14, "bold"))
         asset_combo.pack(fill=tk.X)
 
         # Bind events for real-time updates
-        self.exchange_amount_var.trace_add("write", lambda *_: self._update_exchange_quote())
-        asset_combo.bind("<<ComboboxSelected>>", lambda _e: self._handle_exchange_select())
-        amount_entry.bind("<KeyRelease>", lambda _e: self._update_exchange_quote())
-        amount_entry.bind("<FocusOut>", lambda _e: self._update_exchange_quote())
+        self.exchange_amount_var.trace_add(
+            "write", lambda *_: self._update_exchange_quote())
+        asset_combo.bind("<<ComboboxSelected>>",
+                         lambda _e: self._handle_exchange_select())
+        amount_entry.bind(
+            "<KeyRelease>", lambda _e: self._update_exchange_quote())
+        amount_entry.bind(
+            "<FocusOut>", lambda _e: self._update_exchange_quote())
 
-        # Balance section with improved styling
-        balance_section = tk.Frame(card, bg=self.surface)
-        balance_section.pack(fill=tk.X, pady=(8, 0))
-        tk.Label(balance_section, text="Portfolio Balance", font=("Helvetica", 12, "bold"), bg=self.surface, fg="#6b7280").pack(anchor="w", pady=(0, 4))
+        # Convert button
+        action_row = tk.Frame(card, bg=self.surface)
+        action_row.pack(fill=tk.X, pady=(0, 12))
+        convert_btn = tk.Button(
+            action_row,
+            text="Convert to USD",
+            font=("Helvetica", 11, "bold"),
+            bg="#3b82f6",
+            fg="white",
+            relief="flat",
+            padx=16,
+            pady=8,
+            command=self._convert_to_usd,
+            cursor="hand2",
+            activebackground="#2563eb",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        convert_btn.pack(side=tk.RIGHT)
+
+        # Buy/Sell section (inspired from Wallet) - improved UI with card
+        trade_card = tk.Frame(card, bg="#f9fafb", padx=14, pady=14,
+                              highlightthickness=1, highlightbackground="#e5e7eb")
+        trade_card.pack(fill=tk.BOTH, expand=True, pady=(0, 12))
+
+        # Section title
+        tk.Label(
+            trade_card,
+            text="Trade",
+            font=("Helvetica", 14, "bold"),
+            bg="#f9fafb",
+            fg="#111827",
+        ).pack(anchor="w", pady=(0, 12))
+
+        # Input section with better layout
+        input_row = tk.Frame(trade_card, bg="#f9fafb")
+        input_row.pack(fill=tk.X, pady=(0, 10))
+
+        # Asset selector with holdings display
+        asset_col = tk.Frame(input_row, bg="#f9fafb")
+        asset_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
+        tk.Label(
+            asset_col,
+            text="Asset (Coin)",
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 10, "bold"),
+        ).pack(anchor="w", pady=(0, 4))
+
+        asset_selector_frame = tk.Frame(
+            asset_col, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
+        asset_selector_frame.pack(fill=tk.X)
+        trade_asset_combo = ttk.Combobox(
+            asset_selector_frame,
+            values=list(self.symbols.keys()),
+            textvariable=self.exchange_asset_var,
+            state="readonly",
+            width=15,
+            font=("Helvetica", 12, "bold")
+        )
+        trade_asset_combo.pack(fill=tk.X, padx=10, pady=8)
+        trade_asset_combo.bind("<<ComboboxSelected>>",
+                               lambda _e: self._handle_exchange_select())
+
+        # Holdings display
+        self.holdings_display_var = tk.StringVar(value="Holdings: 0.000000")
+        tk.Label(
+            asset_col,
+            textvariable=self.holdings_display_var,
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 9),
+        ).pack(anchor="w", pady=(4, 0))
+
+        # Amount input
+        amount_col = tk.Frame(input_row, bg="#f9fafb")
+        amount_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 8))
+        tk.Label(
+            amount_col,
+            text="Amount",
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 10, "bold"),
+        ).pack(anchor="w", pady=(0, 4))
+
+        amount_entry_frame = tk.Frame(
+            amount_col, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
+        amount_entry_frame.pack(fill=tk.X)
+        trade_amount_entry = tk.Entry(
+            amount_entry_frame,
+            bd=0,
+            font=("Helvetica", 12, "bold"),
+            bg="#ffffff",
+            fg="#111827",
+            relief="flat",
+            highlightthickness=0,
+            insertbackground="#111827"
+        )
+        trade_amount_entry.pack(fill=tk.X, padx=10, pady=8)
+
+        # Buy/Sell buttons
+        buttons_col = tk.Frame(input_row, bg="#f9fafb")
+        buttons_col.pack(side=tk.LEFT, padx=(8, 0))
+        tk.Label(
+            buttons_col,
+            text=" ",
+            bg="#f9fafb",
+            font=("Helvetica", 10, "bold"),
+        ).pack(anchor="w", pady=(0, 4))  # Spacer for alignment
+
+        buttons = tk.Frame(buttons_col, bg="#f9fafb")
+        buttons.pack()
+
+        buy_btn = tk.Button(
+            buttons,
+            text="Buy (Mock)",
+            font=("Helvetica", 11, "bold"),
+            bg="#16a34a",
+            fg="white",
+            relief="flat",
+            padx=20,
+            pady=8,
+            command=lambda: self._execute_trade("BUY", trade_amount_entry),
+            cursor="hand2",
+            activebackground="#15803d",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        buy_btn.pack(side=tk.LEFT, padx=(0, 6))
+
+        sell_btn = tk.Button(
+            buttons,
+            text="Sell (Mock)",
+            font=("Helvetica", 11, "bold"),
+            bg="#dc2626",
+            fg="white",
+            relief="flat",
+            padx=20,
+            pady=8,
+            command=lambda: self._execute_trade("SELL", trade_amount_entry),
+            cursor="hand2",
+            activebackground="#b91c1c",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0
+        )
+        sell_btn.pack(side=tk.LEFT)
+
+        # Status message
+        self.exchange_status_var = tk.StringVar(
+            value="Create mock orders to rebalance the portfolio")
+        tk.Label(
+            trade_card,
+            textvariable=self.exchange_status_var,
+            bg="#f9fafb",
+            fg="#6b7280",
+            anchor="w",
+            font=("Helvetica", 10),
+        ).pack(fill=tk.X, pady=(8, 0))
+
+        # Store references
+        self.trade_amount_entry = trade_amount_entry
+        self.trade_asset_combo = trade_asset_combo
+
+        # Total and Balance section - side by side with separate borders (inspired from Wallet)
+        total_balance_row = tk.Frame(trade_card, bg="#f9fafb")
+        total_balance_row.pack(fill=tk.X, pady=(12, 0))
+
+        # Total section
+        total_frame = tk.Frame(total_balance_row, bg="#f9fafb")
+        total_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 6))
+        tk.Label(
+            total_frame,
+            text="Total",
+            font=("Helvetica", 12, "bold"),
+            fg="#6b7280",
+            bg="#f9fafb",
+        ).pack(anchor="w", pady=(0, 4))
+
+        total_display = tk.Frame(
+            total_frame, bg="#ffffff", highlightthickness=1, highlightbackground="#e5e7eb")
+        total_display.pack(fill=tk.X)
+        self.exchange_total_var = tk.StringVar(value="Total: $ --")
+        tk.Label(
+            total_display,
+            textvariable=self.exchange_total_var,
+            font=("Helvetica", 16, "bold"),
+            fg="#16a34a",
+            bg="#ffffff",
+            anchor="w",
+        ).pack(fill=tk.X, padx=12, pady=10)
+
+        # Balance section
+        balance_frame = tk.Frame(total_balance_row, bg="#f9fafb")
+        balance_frame.pack(side=tk.RIGHT, fill=tk.BOTH,
+                           expand=True, padx=(6, 0))
+        tk.Label(
+            balance_frame,
+            text="Balance",
+            font=("Helvetica", 12, "bold"),
+            fg="#6b7280",
+            bg="#f9fafb",
+        ).pack(anchor="w", pady=(0, 4))
+
+        balance_display = tk.Frame(
+            balance_frame, bg="#ffffff", highlightthickness=1, highlightbackground="#e5e7eb")
+        balance_display.pack(fill=tk.X)
         self.exchange_balance_var = tk.StringVar(value="$ -- USD")
-        tk.Label(balance_section, textvariable=self.exchange_balance_var, font=("Helvetica", 20, "bold"), bg=self.surface, fg="#16a34a").pack(anchor="w")
+        tk.Label(
+            balance_display,
+            textvariable=self.exchange_balance_var,
+            font=("Helvetica", 16, "bold"),
+            fg="#16a34a",
+            bg="#ffffff",
+            anchor="w",
+        ).pack(fill=tk.X, padx=12, pady=10)
 
     def _handle_symbol_select(self, symbol):
         self.chart_symbol = symbol
@@ -707,8 +988,20 @@ class OverviewPanel:
             self.chart_symbol = symbol
             self.chart_selector_var.set(symbol)
             self._update_exchange_quote()
+            self._update_holdings_display()
             self.on_select(symbol)
             self.set_active_symbol(symbol)
+
+    def _update_holdings_display(self):
+        """Update holdings display when asset is selected"""
+        if hasattr(self, "holdings_display_var"):
+            symbol = self.exchange_asset_var.get()
+            if symbol and symbol in self.symbols:
+                holdings = self.mock_holdings.get(symbol, 0.0)
+                self.holdings_display_var.set(
+                    f"Holdings: {holdings:.6f} {symbol}")
+            else:
+                self.holdings_display_var.set("Holdings: 0.000000")
 
     def _on_chart_selector_change(self):
         symbol = self.chart_selector_var.get()
@@ -743,7 +1036,8 @@ class OverviewPanel:
                 change_percent = float(data.get("priceChangePercent", 0))
             except (TypeError, ValueError):
                 continue
-            results[symbol_key] = {"price": price, "change_percent": change_percent}
+            results[symbol_key] = {"price": price,
+                                   "change_percent": change_percent}
         if results:
             self.parent.after(0, lambda: self._apply_updates(results))
 
@@ -774,13 +1068,14 @@ class OverviewPanel:
                     bg_color = "#fee2e2"  # Light red background
                     text_color = "#7f1d1d"  # Dark red text
                     change_color = "#dc2626"  # Medium red for change text
-                
+
                 # Update background colors
                 favorite["inner"].config(bg=bg_color)
-                favorite["price"].config(text=f"$ {price:,.2f}", bg=bg_color, fg=text_color)
+                favorite["price"].config(
+                    text=f"$ {price:,.2f}", bg=bg_color, fg=text_color)
                 favorite["subtitle"].config(bg=bg_color, fg=text_color)
                 favorite["change"].config(bg=bg_color, fg=change_color)
-                
+
                 sign = "+" if change_percent >= 0 else ""
                 favorite["change"].config(text=f"{sign}{change_percent:.2f}%")
 
@@ -788,17 +1083,25 @@ class OverviewPanel:
             if row:
                 sign = "+" if change_percent >= 0 else ""
                 fg = "#16a34a" if change_percent >= 0 else "#dc2626"
-                row["change"].config(text=f"{sign}{change_percent:.2f}%", fg=fg)
+                row["change"].config(
+                    text=f"{sign}{change_percent:.2f}%", fg=fg)
                 row["price"].config(text=f"{price:,.2f} USD")
                 canvas = self.spark_canvases.get(symbol_key)
                 if canvas:
-                    self._draw_sparkline(canvas, self.price_history[symbol_key], symbol_key)
+                    self._draw_sparkline(
+                        canvas, self.price_history[symbol_key], symbol_key)
 
-        # Update exchange balance
-        if hasattr(self, "exchange_balance_var"):
-            self.exchange_balance_var.set(f"$ {balance:,.2f} USD")
         # Update exchange quote when prices change
         self._update_exchange_quote()
+
+        # Update Total and Balance displays
+        self._calculate_mock_total()
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
+
         self._trigger_chart_refresh()
         self._update_chart_preview()
 
@@ -822,7 +1125,8 @@ class OverviewPanel:
         actual_trend_up = normalized[-1] >= normalized[0]
         line_color = "#16a34a" if actual_trend_up else "#dc2626"
         # Use green gradient for upward trends, red gradient for downward trends
-        fill_color = "#d1fae5" if actual_trend_up else "#fee2e2"  # Light green for up, light red for down
+        # Light green for up, light red for down
+        fill_color = "#d1fae5" if actual_trend_up else "#fee2e2"
 
         points = []
         total_points = len(normalized)
@@ -860,7 +1164,8 @@ class OverviewPanel:
             end = candles[-1]["close"]
             change = ((end - start) / start * 100) if start else 0.0
         elif history:
-            change = ((history[-1] - history[0]) / history[0] * 100) if history[0] else 0.0
+            change = ((history[-1] - history[0]) /
+                      history[0] * 100) if history[0] else 0.0
         if price:
             self.chart_price_var.set(f"$ {price:,.2f}")
         updates = len(candles) if candles else len(history)
@@ -887,9 +1192,11 @@ class OverviewPanel:
         grid_lines = 6
         for i in range(grid_lines):
             y = margin + usable_h * (i / (grid_lines - 1))
-            self.chart_canvas.create_line(margin, y, margin + usable_w, y, fill="#d1d5db", dash=(2,))
+            self.chart_canvas.create_line(
+                margin, y, margin + usable_w, y, fill="#d1d5db", dash=(2,))
             price_level = max_price - (span * i / (grid_lines - 1))
-            self.chart_canvas.create_text(margin + usable_w + 50, y, text=f"$ {price_level:,.0f}", fill="#6b7280", font=("Helvetica", 10))
+            self.chart_canvas.create_text(
+                margin + usable_w + 50, y, text=f"$ {price_level:,.0f}", fill="#6b7280", font=("Helvetica", 10))
 
         for idx, candle in enumerate(self.chart_candles):
             open_p = candle["open"]
@@ -910,7 +1217,8 @@ class OverviewPanel:
             y_high = y(high_p)
             y_low = y(low_p)
 
-            self.chart_canvas.create_line(x_center, y_high, x_center, y_low, fill=color, width=2)
+            self.chart_canvas.create_line(
+                x_center, y_high, x_center, y_low, fill=color, width=2)
             self.chart_canvas.create_rectangle(
                 x0,
                 min(y_open, y_close),
@@ -923,14 +1231,15 @@ class OverviewPanel:
         for ratio, label in time_labels:
             x = margin + usable_w * ratio
             y = margin + usable_h + 12
-            self.chart_canvas.create_text(x, y, text=label, fill="#0f172a", font=("Helvetica", 11, "bold"))
+            self.chart_canvas.create_text(
+                x, y, text=label, fill="#0f172a", font=("Helvetica", 11, "bold"))
 
     def _update_exchange_quote(self):
         symbol = self.exchange_asset_var.get()
         if not symbol or symbol not in self.symbols:
             self.exchange_quote_var.set("$ -- USD")
             return
-        
+
         try:
             amount_str = self.exchange_amount_var.get().strip()
             if not amount_str:
@@ -939,17 +1248,124 @@ class OverviewPanel:
                 amount = float(amount_str)
         except (TypeError, ValueError):
             amount = 0.0
-        
+
         price = self.latest_prices.get(symbol, 0.0)
         if price <= 0:
             self.exchange_quote_var.set("$ -- USD")
             return
-        
+
         quote = amount * price
         if quote > 0:
             self.exchange_quote_var.set(f"$ {quote:,.2f} USD")
         else:
             self.exchange_quote_var.set("$ 0.00 USD")
+
+        # Update Total and Balance displays
+        self._calculate_mock_total()
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
+
+    def _convert_to_usd(self):
+        """Convert asset to USD (mock function inspired from Wallet)"""
+        try:
+            amount = float(self.exchange_amount_var.get().strip())
+        except (TypeError, ValueError):
+            # Show message in status if available
+            return
+        if amount <= 0:
+            return
+
+        symbol = self.exchange_asset_var.get()
+        if not symbol or symbol not in self.symbols:
+            return
+
+        price = self.latest_prices.get(symbol, 0)
+        if price <= 0:
+            return
+
+        quote = amount * price
+        # Mock conversion: add to balance
+        self.mock_balance += quote
+        self.mock_total = self.mock_balance
+
+        # Update displays
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
+
+        # Reset amount field
+        self.exchange_amount_var.set("1.0")
+        self._update_exchange_quote()
+
+    def _execute_trade(self, action, amount_entry):
+        """Execute buy/sell trade (mock function inspired from Wallet)"""
+        try:
+            amount = float(amount_entry.get())
+        except (TypeError, ValueError):
+            if hasattr(self, "exchange_status_var"):
+                self.exchange_status_var.set(
+                    "Enter the amount in numeric form")
+            return
+        if amount <= 0:
+            if hasattr(self, "exchange_status_var"):
+                self.exchange_status_var.set("Amount must be greater than 0")
+            return
+
+        symbol = self.exchange_asset_var.get()
+        if not symbol or symbol not in self.symbols:
+            return
+
+        price = self.latest_prices.get(symbol, 0)
+        if price <= 0:
+            if hasattr(self, "exchange_status_var"):
+                self.exchange_status_var.set(
+                    "Market price not available yet, try again")
+            return
+
+        notional = amount * price
+        if action == "BUY":
+            if notional > self.mock_balance:
+                if hasattr(self, "exchange_status_var"):
+                    self.exchange_status_var.set("Insufficient USDT balance")
+                return
+            self.mock_balance -= notional
+            self.mock_holdings[symbol] = self.mock_holdings.get(
+                symbol, 0) + amount
+        else:
+            holding = self.mock_holdings.get(symbol, 0)
+            if amount > holding:
+                if hasattr(self, "exchange_status_var"):
+                    self.exchange_status_var.set("Not enough holdings to sell")
+                return
+            self.mock_holdings[symbol] = holding - amount
+            self.mock_balance += notional
+
+        if hasattr(self, "exchange_status_var"):
+            self.exchange_status_var.set(
+                f"{action} {amount:.6f} {symbol} @ {price:,.2f} (mock)")
+        amount_entry.delete(0, tk.END)
+
+        # Update holdings display
+        self._update_holdings_display()
+
+        # Update Total and Balance
+        self._calculate_mock_total()
+        if hasattr(self, "exchange_total_var"):
+            self.exchange_total_var.set(f"Total: $ {self.mock_total:,.2f}")
+        if hasattr(self, "exchange_balance_var"):
+            self.exchange_balance_var.set(f"$ {self.mock_balance:,.2f} USD")
+
+    def _calculate_mock_total(self):
+        """Calculate mock total from balance and holdings"""
+        total = self.mock_balance
+        for symbol, amount in self.mock_holdings.items():
+            price = self.latest_prices.get(symbol, 0)
+            total += amount * price
+        self.mock_total = total
 
     def set_active_symbol(self, symbol_key):
         self.chart_symbol = symbol_key
@@ -957,7 +1373,8 @@ class OverviewPanel:
         self.exchange_asset_var.set(symbol_key)
         for symbol, card in self.favorite_cards.items():
             highlight = 2 if symbol == symbol_key else 1
-            card["frame"].config(highlightthickness=highlight, highlightbackground="#60a5fa")
+            card["frame"].config(highlightthickness=highlight,
+                                 highlightbackground="#60a5fa")
         for symbol, row in self.market_rows.items():
             bg = "#e0ecff" if symbol == symbol_key else self.surface
             row["frame"].config(bg=bg)
@@ -972,7 +1389,8 @@ class OverviewPanel:
         if self._chart_fetch_inflight:
             return
         self._chart_fetch_inflight = True
-        threading.Thread(target=self._refresh_chart_candles, args=(self.chart_symbol,), daemon=True).start()
+        threading.Thread(target=self._refresh_chart_candles,
+                         args=(self.chart_symbol,), daemon=True).start()
 
     def _refresh_chart_candles(self, symbol_key):
         symbol = self.symbols.get(symbol_key)
@@ -996,7 +1414,8 @@ class OverviewPanel:
                             continue
         finally:
             self._chart_fetch_inflight = False
-        self.parent.after(0, lambda: self._apply_chart_candles(symbol_key, candles))
+        self.parent.after(
+            0, lambda: self._apply_chart_candles(symbol_key, candles))
 
     def _apply_chart_candles(self, symbol_key, candles):
         self._chart_fetch_inflight = False

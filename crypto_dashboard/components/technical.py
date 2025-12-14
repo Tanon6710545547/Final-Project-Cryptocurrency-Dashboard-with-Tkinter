@@ -112,7 +112,10 @@ class TechnicalPanel:
                 ax.set_facecolor(bg)
                 for spine in ax.spines.values():
                     spine.set_color(divider)
-                ax.grid(color=divider, linestyle="--", linewidth=0.6, alpha=0.35)
+                # Add horizontal grid lines (rows) - solid lines for better visibility
+                ax.grid(True, which='major', axis='y', color=divider, linestyle="-", linewidth=0.8, alpha=0.5)
+                ax.grid(True, which='minor', axis='y', color=divider, linestyle="--", linewidth=0.4, alpha=0.3)
+                ax.minorticks_on()
                 ax.tick_params(colors=text_muted)
 
             candle_width = 0.6 * (x_dates[1] - x_dates[0]) if len(x_dates) > 1 else 0.02

@@ -93,24 +93,39 @@ class OrderBookPanel:
 
     def _configure_style(self):
         style = ttk.Style()
+        separator_color = self.theme.get("panel_border", "#242c37")
+        # Use lighter background for better readability if using light theme
+        bg_color = self.theme.get("panel", "#161b22")
+        header_bg = self.theme.get("divider", "#1f2933") if bg_color == "#161b22" else "#f3f4f6"
+        
         style.configure(
             "Orderbook.Treeview",
-            background=self.theme["panel"],
-            fieldbackground=self.theme["panel"],
+            background=bg_color,
+            fieldbackground=bg_color,
             foreground=self.theme["text_primary"],
-            rowheight=18,
-            borderwidth=0,
+            rowheight=28,  # Increased row height for better readability
+            borderwidth=1,
+            relief="solid",
+            font=("Helvetica", 11),  # Larger font
         )
         style.configure(
             "Orderbook.Treeview.Heading",
-            background=self.theme["panel"],
+            background=header_bg,
             foreground=self.theme["text_muted"],
-            font=("Helvetica", 11, "bold"),
+            font=("Helvetica", 12, "bold"),  # Larger, bolder header font
+            borderwidth=1,
+            relief="solid",
+            padding=(8, 6),  # Add padding to headers
         )
         style.map(
             "Orderbook.Treeview",
             background=[("selected", self.theme["divider"])],
             foreground=[("selected", self.theme["text_primary"])],
+        )
+        # Configure column separators by setting borders
+        style.configure(
+            "Orderbook.Treeview",
+            bordercolor=separator_color,
         )
         style.configure(
             "Orderbook.TButton",
@@ -134,8 +149,19 @@ class OrderBookPanel:
         )
         tree.heading("price", text="Price")
         tree.heading("qty", text="Quantity")
-        tree.column("price", anchor="center", width=120, stretch=True)
-        tree.column("qty", anchor="center", width=120, stretch=True)
+        # Set equal column widths for perfect balance
+        tree.column("price", anchor="center", width=125, stretch=True, minwidth=125)
+        tree.column("qty", anchor="center", width=125, stretch=True, minwidth=125)
+        
+        # Configure alternating row colors for better readability
+        bg_color = self.theme.get("panel", "#161b22")
+        if bg_color == "#161b22":  # Dark theme
+            even_bg = bg_color
+            odd_bg = self.theme.get("divider", "#1f2933")
+        else:  # Light theme
+            even_bg = "#ffffff"
+            odd_bg = "#f9fafb"
+        
         tree.tag_configure(
             "bid",
             foreground=self.theme["accent_green"],
@@ -144,6 +170,9 @@ class OrderBookPanel:
             "ask",
             foreground=self.theme["accent_red"],
         )
+        tree.tag_configure("even", background=even_bg)
+        tree.tag_configure("odd", background=odd_bg)
+        
         tree.pack(fill=tk.BOTH, expand=True)
         return tree
 
@@ -202,12 +231,14 @@ class OrderBookPanel:
     def _update_tree(self, tree, rows, tag):
         for child in tree.get_children():
             tree.delete(child)
-        for price, qty, *_ in rows:
+        for idx, (price, qty, *_) in enumerate(rows):
+            # Add alternating row colors for better readability
+            row_tag = "even" if idx % 2 == 0 else "odd"
             tree.insert(
                 "",
                 tk.END,
                 values=(f"{float(price):,.2f}", f"{float(qty):,.4f}"),
-                tags=(tag,),
+                tags=(tag, row_tag),
             )
 
     def pack(self, **kwargs):
