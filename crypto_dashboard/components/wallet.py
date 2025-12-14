@@ -297,7 +297,7 @@ class WalletPanel:
 
         # Buy input row
         buy_input_row = tk.Frame(buy_section, bg="#f9fafb")
-        buy_input_row.pack(fill=tk.X, padx=12, pady=(0, 4))
+        buy_input_row.pack(fill=tk.X, padx=12, pady=(10, 4))
 
         # Asset selector for buy
         buy_asset_col = tk.Frame(buy_input_row, bg="#f9fafb")
@@ -354,6 +354,8 @@ class WalletPanel:
         buy_amount_entry_frame = tk.Frame(
             buy_amount_col, bg="#ffffff", highlightthickness=2, highlightbackground="#9ca3af", highlightcolor="#9ca3af")
         buy_amount_entry_frame.pack(fill=tk.X)
+        # Store reference for button alignment
+        self.buy_amount_entry_frame = buy_amount_entry_frame
         self.buy_amount_entry = tk.Entry(
             buy_amount_entry_frame,
             bd=0,
@@ -364,36 +366,46 @@ class WalletPanel:
             highlightthickness=0,
             insertbackground="#111827"
         )
-        self.buy_amount_entry.pack(fill=tk.X, padx=6, pady=4)
+        self.buy_amount_entry.pack(fill=tk.X, padx=6, pady=6)
 
-        # Buy button
+        # Price display for buy (1 crypto = X USD)
+        self.buy_price_display_var = tk.StringVar(value="1 BTC = $0.00")
+        tk.Label(
+            buy_amount_col,
+            textvariable=self.buy_price_display_var,
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 8),
+        ).pack(anchor="w", pady=(2, 0))
+
+        # Buy button - same size as amount field and aligned
         buy_button_col = tk.Frame(buy_input_row, bg="#f9fafb")
         buy_button_col.pack(side=tk.LEFT, padx=(8, 0))
-        tk.Label(
-            buy_button_col,
-            text=" ",
-            bg="#f9fafb",
-            font=("Helvetica", 9, "bold"),
-        ).pack(anchor="w", pady=(0, 2))  # Spacer for alignment
+        # Spacer to align with Amount label - removed to move button up
+        # (No spacer label - button will align with input field directly)
 
+        # Button frame to match amount entry frame height - สีเทาเหมือนช่อง input
+        buy_btn_frame = tk.Frame(buy_button_col, bg="#ffffff", highlightthickness=2,
+                                 highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        buy_btn_frame.pack(fill=tk.BOTH, expand=True)
         buy_btn = tk.Button(
-            buy_button_col,
+            buy_btn_frame,
             text="Buy (Mock)",
             font=("Helvetica", 9, "bold"),
-            bg="#16a34a",
-            fg="white",
+            bg="#f3f4f6",
+            fg="#111827",
             relief="flat",
             padx=12,
             pady=4,
             command=lambda: self._execute_trade_from_exchange(
                 "BUY", self.buy_amount_entry, self.buy_asset_display_var),
             cursor="hand2",
-            activebackground="#16a34a",  # ไม่เปลี่ยนสีเมื่อกด
-            activeforeground="white",
+            activebackground="#f3f4f6",  # ไม่เปลี่ยนสีเมื่อกด
+            activeforeground="#111827",
             bd=0,
             highlightthickness=0
         )
-        buy_btn.pack()
+        buy_btn.pack(fill=tk.BOTH, expand=True, padx=6, pady=4)
 
         # Status message for buy
         self.buy_status_var = tk.StringVar(value="")
@@ -422,7 +434,7 @@ class WalletPanel:
 
         # Sell input row
         sell_input_row = tk.Frame(sell_section, bg="#f9fafb")
-        sell_input_row.pack(fill=tk.X, padx=12, pady=(0, 4))
+        sell_input_row.pack(fill=tk.X, padx=12, pady=(10, 4))
 
         # Asset selector for sell
         sell_asset_col = tk.Frame(sell_input_row, bg="#f9fafb")
@@ -437,7 +449,7 @@ class WalletPanel:
         ).pack(anchor="w", pady=(0, 2))
 
         sell_asset_selector_frame = tk.Frame(
-            sell_asset_col, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
+            sell_asset_col, bg="#ffffff", highlightthickness=2, highlightbackground="#9ca3af", highlightcolor="#9ca3af")
         sell_asset_selector_frame.pack(fill=tk.X)
         self.sell_asset_display_var = tk.StringVar(
             value=self.exchange_asset_display_var.get())
@@ -477,8 +489,10 @@ class WalletPanel:
         ).pack(anchor="w", pady=(0, 2))
 
         sell_amount_entry_frame = tk.Frame(
-            sell_amount_col, bg="#ffffff", highlightthickness=1, highlightbackground="#d1d5db")
+            sell_amount_col, bg="#ffffff", highlightthickness=2, highlightbackground="#9ca3af", highlightcolor="#9ca3af")
         sell_amount_entry_frame.pack(fill=tk.X)
+        # Store reference for button alignment
+        self.sell_amount_entry_frame = sell_amount_entry_frame
         self.sell_amount_entry = tk.Entry(
             sell_amount_entry_frame,
             bd=0,
@@ -489,36 +503,46 @@ class WalletPanel:
             highlightthickness=0,
             insertbackground="#111827"
         )
-        self.sell_amount_entry.pack(fill=tk.X, padx=6, pady=4)
+        self.sell_amount_entry.pack(fill=tk.X, padx=6, pady=6)
 
-        # Sell button
+        # Price display for sell (1 crypto = X USD)
+        self.sell_price_display_var = tk.StringVar(value="1 BTC = $0.00")
+        tk.Label(
+            sell_amount_col,
+            textvariable=self.sell_price_display_var,
+            bg="#f9fafb",
+            fg="#6b7280",
+            font=("Helvetica", 8),
+        ).pack(anchor="w", pady=(2, 0))
+
+        # Sell button - same size as amount field and aligned
         sell_button_col = tk.Frame(sell_input_row, bg="#f9fafb")
         sell_button_col.pack(side=tk.LEFT, padx=(8, 0))
-        tk.Label(
-            sell_button_col,
-            text=" ",
-            bg="#f9fafb",
-            font=("Helvetica", 9, "bold"),
-        ).pack(anchor="w", pady=(0, 2))  # Spacer for alignment
+        # Spacer to align with Amount label - removed to move button up
+        # (No spacer label - button will align with input field directly)
 
+        # Button frame to match amount entry frame height - สีเทาเหมือนช่อง input
+        sell_btn_frame = tk.Frame(sell_button_col, bg="#ffffff", highlightthickness=2,
+                                  highlightbackground="#9ca3af", highlightcolor="#9ca3af")
+        sell_btn_frame.pack(fill=tk.BOTH, expand=True)
         sell_btn = tk.Button(
-            sell_button_col,
+            sell_btn_frame,
             text="Sell (Mock)",
             font=("Helvetica", 9, "bold"),
-            bg="#dc2626",
-            fg="white",
+            bg="#f3f4f6",
+            fg="#111827",
             relief="flat",
             padx=12,
             pady=4,
             command=lambda: self._execute_trade_from_exchange(
                 "SELL", self.sell_amount_entry, self.sell_asset_display_var),
             cursor="hand2",
-            activebackground="#dc2626",  # ไม่เปลี่ยนสีเมื่อกด
-            activeforeground="white",
+            activebackground="#f3f4f6",  # ไม่เปลี่ยนสีเมื่อกด
+            activeforeground="#111827",
             bd=0,
             highlightthickness=0
         )
-        sell_btn.pack()
+        sell_btn.pack(fill=tk.BOTH, expand=True, padx=6, pady=4)
 
         # Status message for sell
         self.sell_status_var = tk.StringVar(value="")
@@ -640,14 +664,14 @@ class WalletPanel:
             text="Deposit",
             font=("Helvetica", 11, "bold"),
             bg="#16a34a",
-            fg="white",
+            fg="#111827",
             relief="flat",
             padx=20,
             pady=8,
             command=lambda: self._handle_wallet_action("deposit"),
             cursor="hand2",
             activebackground="#16a34a",  # ไม่เปลี่ยนสีเมื่อกด
-            activeforeground="white",
+            activeforeground="#111827",
             bd=0,
             highlightthickness=0,
             state="normal"
@@ -659,14 +683,14 @@ class WalletPanel:
             text="Withdraw",
             font=("Helvetica", 11, "bold"),
             bg="#dc2626",
-            fg="white",
+            fg="#111827",
             relief="flat",
             padx=20,
             pady=8,
             command=lambda: self._handle_wallet_action("withdraw"),
             cursor="hand2",
             activebackground="#dc2626",  # ไม่เปลี่ยนสีเมื่อกด
-            activeforeground="white",
+            activeforeground="#111827",
             bd=0,
             highlightthickness=0,
             state="normal"
@@ -1020,10 +1044,19 @@ class WalletPanel:
                     holdings = self.holdings.get(asset, 0.0)
                     self.buy_holdings_display_var.set(
                         f"Holdings: {holdings:.6f} {asset}")
+                    # Update price display (1 crypto = X USD)
+                    if hasattr(self, "buy_price_display_var"):
+                        price = self.prices.get(asset, 0)
+                        self.buy_price_display_var.set(
+                            f"1 {asset} = ${price:,.2f}")
                 else:
                     self.buy_holdings_display_var.set("Holdings: 0.000000")
+                    if hasattr(self, "buy_price_display_var"):
+                        self.buy_price_display_var.set("1 BTC = $0.00")
             else:
                 self.buy_holdings_display_var.set("Holdings: 0.000000")
+                if hasattr(self, "buy_price_display_var"):
+                    self.buy_price_display_var.set("1 BTC = $0.00")
 
     def _update_sell_holdings_display(self):
         """Update holdings display for sell section"""
@@ -1036,10 +1069,19 @@ class WalletPanel:
                     holdings = self.holdings.get(asset, 0.0)
                     self.sell_holdings_display_var.set(
                         f"Holdings: {holdings:.6f} {asset}")
+                    # Update price display (1 crypto = X USD)
+                    if hasattr(self, "sell_price_display_var"):
+                        price = self.prices.get(asset, 0)
+                        self.sell_price_display_var.set(
+                            f"1 {asset} = ${price:,.2f}")
                 else:
                     self.sell_holdings_display_var.set("Holdings: 0.000000")
+                    if hasattr(self, "sell_price_display_var"):
+                        self.sell_price_display_var.set("1 BTC = $0.00")
             else:
                 self.sell_holdings_display_var.set("Holdings: 0.000000")
+                if hasattr(self, "sell_price_display_var"):
+                    self.sell_price_display_var.set("1 BTC = $0.00")
 
     def _execute_trade_from_exchange(self, action, amount_entry, asset_display_var):
         """Execute buy/sell trade from Exchange section"""

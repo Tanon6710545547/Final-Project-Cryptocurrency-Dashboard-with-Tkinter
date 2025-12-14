@@ -29,6 +29,20 @@ FAVORITE_COLORS = [
 # Default favorites
 DEFAULT_FAVORITES = ["BTC", "ETH", "LTC", "ADA"]
 
+# Asset display names mapping (same as wallet.py)
+ASSET_DISPLAY_NAMES = {
+    "BTC": "Bitcoin",
+    "ETH": "Ethereum",
+    "SOL": "Solana",
+    "BNB": "BNB Chain",
+    "XRP": "XRP",
+    "ADA": "Cardano",
+    "DOGE": "Dogecoin",
+    "MATIC": "Polygon",
+    "LTC": "Litecoin",
+    "AVAX": "Avalanche",
+}
+
 
 def get_favorites_file_path():
     """Get the path to the favorites config file"""
@@ -104,6 +118,15 @@ class OverviewPanel:
         self.mock_total = 0.0
         # Mock holdings for buy/sell functionality
         self.mock_holdings = {symbol: 0.0 for symbol in self.symbols.keys()}
+        
+        # Create asset display mapping (similar to wallet)
+        self.asset_code_to_display = {}
+        self.asset_display_to_code = {}
+        for code in self.symbols.keys():
+            display_name = ASSET_DISPLAY_NAMES.get(code, code)
+            display = f"{code} • {display_name}"
+            self.asset_code_to_display[code] = display
+            self.asset_display_to_code[display] = code
 
         # Load user favorites
         self.user_favorites = load_favorites()
@@ -697,84 +720,20 @@ class OverviewPanel:
             self.spark_canvases[symbol] = canvas
 
     def _build_exchange_card(self, parent):
-        card = tk.Frame(parent, bg=self.surface, padx=18, pady=10,
+        card = tk.Frame(parent, bg="#f9fafb", padx=18, pady=16,
                         highlightthickness=1, highlightbackground="#e5e7eb")
         card.pack(fill=tk.BOTH, expand=True)
+        tk.Label(
+            card,
+            text="Exchange",
+            font=("Helvetica", 14, "bold"),
+            fg="#111827",
+            bg="#f9fafb",
+        ).pack(anchor="w", pady=(0, 10))
 
-        # Exchange title
-        tk.Label(card, text="Exchange", font=("Helvetica", 16, "bold"),
-                 bg=self.surface, fg="#111827").pack(anchor="w", pady=(0, 12))
-
-        # Conversion display section with better layout
-        conversion_frame = tk.Frame(card, bg=self.surface)
-        conversion_frame.pack(fill=tk.X, pady=(0, 12))
-
-        # Left side: description text
-        desc_frame = tk.Frame(conversion_frame, bg=self.surface)
-        desc_frame.pack(side=tk.LEFT, fill=tk.Y)
-        tk.Label(desc_frame, text="1 unit converts to", font=(
-            "Helvetica", 11), bg=self.surface, fg="#6b7280").pack(anchor="w")
-
-        # Right side: conversion value
-        quote_frame = tk.Frame(conversion_frame, bg=self.surface)
-        quote_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        tk.Label(quote_frame, textvariable=self.exchange_quote_var, font=(
-            "Helvetica", 18, "bold"), bg=self.surface, fg="#111827").pack(anchor="e")
-
-        # Input section with improved styling
-        entry_frame = tk.Frame(card, bg="#f9fafb", highlightthickness=1,
-                               highlightbackground="#e5e7eb", padx=14, pady=12)
-        entry_frame.pack(fill=tk.X, pady=(0, 16))
-
-        # Amount input
-        amount_frame = tk.Frame(entry_frame, bg="#f9fafb")
-        amount_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        tk.Label(amount_frame, text="Amount", font=("Helvetica", 10, "bold"),
-                 bg="#f9fafb", fg="#6b7280").pack(anchor="w", pady=(0, 4))
-        amount_entry = tk.Entry(amount_frame, textvariable=self.exchange_amount_var, bd=0, font=("Helvetica", 16, "bold"),
-                                bg="#ffffff", fg="#111827", relief="flat", highlightthickness=1, highlightbackground="#d1d5db",
-                                highlightcolor="#3b82f6", insertbackground="#111827", justify="left")
-        amount_entry.pack(fill=tk.X, ipady=8)
-
-        # Asset selector
-        asset_frame = tk.Frame(entry_frame, bg="#f9fafb")
-        asset_frame.pack(side=tk.RIGHT, padx=(12, 0))
-        tk.Label(asset_frame, text="Asset", font=("Helvetica", 10, "bold"),
-                 bg="#f9fafb", fg="#6b7280").pack(anchor="w", pady=(0, 4))
-        asset_combo = ttk.Combobox(asset_frame, values=list(self.symbols.keys()), textvariable=self.exchange_asset_var,
-                                   state="readonly", width=10, font=("Helvetica", 14, "bold"))
-        asset_combo.pack(fill=tk.X)
-
-        # Bind events for real-time updates
-        self.exchange_amount_var.trace_add(
-            "write", lambda *_: self._update_exchange_quote())
-        asset_combo.bind("<<ComboboxSelected>>",
-                         lambda _e: self._handle_exchange_select())
-        amount_entry.bind(
-            "<KeyRelease>", lambda _e: self._update_exchange_quote())
-        amount_entry.bind(
-            "<FocusOut>", lambda _e: self._update_exchange_quote())
-
-        # Convert button
-        action_row = tk.Frame(card, bg=self.surface)
-        action_row.pack(fill=tk.X, pady=(0, 12))
-        convert_btn = tk.Button(
-            action_row,
-            text="Convert to USD",
-            font=("Helvetica", 11, "bold"),
-            bg="#3b82f6",
-            fg="white",
-            relief="flat",
-            padx=16,
-            pady=8,
-            command=self._convert_to_usd,
-            cursor="hand2",
-            activebackground="#2563eb",
-            activeforeground="white",
-            bd=0,
-            highlightthickness=0
-        )
-        convert_btn.pack(side=tk.RIGHT)
+        default_asset = self.chart_symbol
+        self.exchange_asset_display_var = tk.StringVar(
+            value=self.asset_code_to_display.get(default_asset, f"{default_asset} • {default_asset}"))
 
         # Buy/Sell section (inspired from Wallet) - improved UI with card
         trade_card = tk.Frame(card, bg="#f9fafb", padx=14, pady=14,
