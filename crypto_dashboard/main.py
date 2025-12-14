@@ -217,8 +217,9 @@ class CryptoDashboardApp:
         for label, shape, callback, active in nav_items:
             self._create_nav_item(label, shape, callback, active)
 
+        # Quick Insight section at the bottom
         insight = tk.Frame(self.sidebar, bg=THEME["sidebar_bg"], pady=20)
-        insight.pack(fill=tk.X, expand=True)
+        insight.pack(fill=tk.X, side=tk.BOTTOM)
         tk.Label(
             insight,
             text="Quick Insight",
@@ -579,12 +580,6 @@ class CryptoDashboardApp:
         self._set_active_nav("Wallet")
         self.sidebar_insight_var.set(
             "Manage holdings easily with live USDT balances")
-
-    def show_alerts_center(self):
-        self.status_var.set("ALERTS • No critical crypto alerts right now")
-        self._set_active_nav("Alerts")
-        self.sidebar_insight_var.set(
-            "No new price alerts yet — set your targets ahead of time")
 
     def _build_detail_section(self):
         self.detail_container = tk.Frame(

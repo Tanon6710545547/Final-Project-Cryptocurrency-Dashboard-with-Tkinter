@@ -1107,11 +1107,15 @@ class WalletPanel:
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
             if hasattr(self, status_var):
                 status_var.set("Enter the amount in numeric form")
+            # Clear amount field even on error (like wallet action)
+            amount_entry.delete(0, tk.END)
             return
         if amount <= 0:
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
             if hasattr(self, status_var):
                 status_var.set("Amount must be greater than 0")
+            # Clear amount field even on error (like wallet action)
+            amount_entry.delete(0, tk.END)
             return
 
         asset_display = asset_display_var.get()
@@ -1120,6 +1124,8 @@ class WalletPanel:
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
             if hasattr(self, status_var):
                 status_var.set("Please select an asset")
+            # Clear amount field even on error (like wallet action)
+            amount_entry.delete(0, tk.END)
             return
 
         price = self.prices.get(asset, 0)
@@ -1127,6 +1133,8 @@ class WalletPanel:
             status_var = self.buy_status_var if action == "BUY" else self.sell_status_var
             if hasattr(self, status_var):
                 status_var.set("Market price not available yet, try again")
+            # Clear amount field even on error (like wallet action)
+            amount_entry.delete(0, tk.END)
             return
 
         notional = amount * price
@@ -1134,7 +1142,11 @@ class WalletPanel:
             if notional > self.cash_balance:
                 if hasattr(self, "buy_status_var"):
                     self.buy_status_var.set("Insufficient USDT balance")
+                # Clear amount field even on error (like wallet action)
+                amount_entry.delete(0, tk.END)
                 return
+            # Clear amount field immediately after validation (like wallet action)
+            amount_entry.delete(0, tk.END)
             self.cash_balance -= notional
             self.holdings[asset] = self.holdings.get(asset, 0) + amount
         else:  # SELL
@@ -1142,7 +1154,11 @@ class WalletPanel:
             if amount > holding:
                 if hasattr(self, "sell_status_var"):
                     self.sell_status_var.set("Not enough holdings to sell")
+                # Clear amount field even on error (like wallet action)
+                amount_entry.delete(0, tk.END)
                 return
+            # Clear amount field immediately after validation (like wallet action)
+            amount_entry.delete(0, tk.END)
             self.holdings[asset] = holding - amount
             self.cash_balance += notional
 
@@ -1167,9 +1183,6 @@ class WalletPanel:
         if hasattr(self, status_var):
             status_var.set(
                 f"{action} {amount:.6f} {asset} @ {price:,.2f} (mock)")
-
-        # Clear amount field
-        amount_entry.delete(0, tk.END)
 
         # Call trade callback if available
         if callable(self.on_trade):

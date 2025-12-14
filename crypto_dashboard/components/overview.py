@@ -226,6 +226,8 @@ class OverviewPanel:
         self.favorites_grid = tk.Frame(parent, bg=self.bg)
         self.favorites_grid.pack(fill=tk.BOTH, expand=True, pady=(0, 0))
         self.favorites_grid.columnconfigure((0, 1), weight=1)
+        self.favorites_grid.rowconfigure(0, weight=1)
+        self.favorites_grid.rowconfigure(1, weight=1)
 
         self._refresh_favorites_display()
 
@@ -247,7 +249,8 @@ class OverviewPanel:
             palette = FAVORITE_COLORS[idx % len(FAVORITE_COLORS)]
 
             card = tk.Frame(self.favorites_grid, bg=self.surface,
-                            bd=0, relief="flat", padx=2, pady=2)
+                            bd=0, relief="flat", padx=2, pady=2,
+                            highlightthickness=1, highlightbackground="#60a5fa", highlightcolor="#60a5fa")
             card.grid(row=row_index, column=col_index,
                       sticky="nsew", padx=8, pady=8)
             # Start with a neutral gray background, will be updated dynamically
